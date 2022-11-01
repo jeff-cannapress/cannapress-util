@@ -1,8 +1,1 @@
-
-plugins/janestore/vendor
-tools/vendor
-
-./themes
-themes
-themes/*
-plugins/janestore/node_modules
+vendor
