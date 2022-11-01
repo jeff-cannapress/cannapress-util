@@ -1,11 +1,11 @@
 {
-    "name": "cannapress/wp-util",
+    "name": "cannapress/util",
     "description": "A library of support functions for wordpress",
     "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Cannapress\\Util\\": "src/"
+            "CannaPress\\Util\\": "src/"
         }
     },
     "authors": [
