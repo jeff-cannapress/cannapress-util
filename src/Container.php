@@ -10,6 +10,10 @@ class Container
     {
         do_action($prefix . '_container_initialized', $this);
     }
+    protected function services(): array
+    {
+        return array_keys($this->providers);
+    }
     public function has($identifier): bool
     {
         return array_key_exists($identifier, $this->providers) && !is_null($this->providers[$identifier]);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace CannaPress\Util\Net;
 
-use CannaPress\Core\Imports\ApiUtil;
+use CannaPress\Retail\Imports\ApiUtil;
 
 class URI
 {

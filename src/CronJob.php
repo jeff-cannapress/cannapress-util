@@ -6,7 +6,6 @@ namespace CannaPress\Util;
 
 abstract class CronJob
 {
-
     protected function __construct(private string $name)
     {
         add_action($this->hook_name(), [$this, 'execute']);
@@ -24,7 +23,7 @@ abstract class CronJob
             wp_schedule_event($timestamp, $recurrence, $this->hook_name(), $args);
         }
     }
-    public abstract function execute(...$args);
+    abstract public function execute(...$args);
 
     public function clear_scheduled()
     {
