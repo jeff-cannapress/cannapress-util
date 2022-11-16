@@ -15,10 +15,10 @@ class Container implements \Psr\Container\ContainerInterface
     public function __construct($plugin_root_dir, private $prefix, private array $providers)
     {
         if(!isset($providers[Env::class])){
-            $providers[Env::class] = Container::singleton(fn($ctx)=> Env::create(trailingslashit($plugin_root_dir).'.env'));
+            $this->providers[Env::class] = Container::singleton(fn($ctx)=> Env::create(trailingslashit($plugin_root_dir).'.env'));
         }
         if(!isset($providers[\Psr\Log\LoggerInterface::class])){
-            $providers[\Psr\Log\LoggerInterface::class] = Container::singleton(function($ctx) use ($plugin_root_dir, $prefix){
+            $this->providers[\Psr\Log\LoggerInterface::class] = Container::singleton(function($ctx) use ($plugin_root_dir, $prefix){
                 $env = $ctx->get(Env::class)->create_child('CANNAPRESS');
 
                 if($env->ENVIRONMENT === 'DEVELOPMENT'){
