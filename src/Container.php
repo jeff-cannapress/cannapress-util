@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace CannaPress\Util;
 
 use CannaPress\Util\DependsOn;
+use CannaPress\Util\Templates\PathResolver;
+use CannaPress\Util\Templates\TemplateManager;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -14,7 +16,7 @@ use ReflectionClass;
 
 class Container implements \Psr\Container\ContainerInterface
 {
-    public function __construct($plugin_root_dir, private $prefix, private array $providers)
+    public function __construct(private string $plugin_root_dir, private $prefix, private array $providers)
     {
         if (!isset($this->providers[Env::class])) {
             $this->providers[Env::class] = Container::singleton(fn ($ctx) => Env::create(trailingslashit($plugin_root_dir) . '.env'));
@@ -52,6 +54,18 @@ class Container implements \Psr\Container\ContainerInterface
             }
         }
         do_action($prefix . '_container_initialized', $this);
+    }
+    protected function create_template_manager(string $which, string $text_domain)
+    {
+        $dir = $this->plugin_root_dir;
+        return Container::singleton(fn ($ctx) => new TemplateManager(
+            $ctx,
+            new PathResolver(
+                $text_domain,
+                TemplateManager::apply_filters('get_theme_overrides_folder', ($text_domain. '/templates/' . $which), $which),
+                $dir . 'templates/' . $which
+            )
+        ));
     }
     protected function register_container_hooks()
     {
