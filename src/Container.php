@@ -55,17 +55,7 @@ class Container implements \Psr\Container\ContainerInterface
         }
         do_action($prefix . '_container_initialized', $this);
     }
-    protected function create_template_manager($ctx, string $which, string $text_domain)
-    {
-        return new TemplateManager(
-            $ctx,
-            new PathResolver(
-                $text_domain,
-                TemplateManager::apply_filters('get_theme_overrides_folder', ($text_domain. '/templates/' . $which), $which),
-                $this->plugin_root_dir . 'templates/' . $which
-            )
-        );
-    }
+
     protected function register_container_hooks()
     {
         $actions = $this->get_reflected_hooks();
