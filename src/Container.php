@@ -4,10 +4,36 @@ declare(strict_types=1);
 
 namespace CannaPress\Util;
 
-class Container
+use Monolog\Formatter\JsonFormatter;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
+use Psr\Log\LogLevel;
+use Psr\Log\NullLogger;
+
+class Container implements \Psr\Container\ContainerInterface
 {
-    public function __construct(private $prefix, private array $providers)
+    public function __construct($plugin_root_dir, private $prefix, private array $providers)
     {
+        if(!isset($providers[Env::class])){
+            $providers[Env::class] = Container::singleton(fn($ctx)=> Env::create(trailingslashit($plugin_root_dir).'.env'));
+        }
+        if(!isset($providers[\Psr\Log\LoggerInterface::class])){
+            $providers[\Psr\Log\LoggerInterface::class] = function($ctx) use ($plugin_root_dir, $prefix){
+                $env = $ctx->get(Env::class)->create_child('CANNAPRESS');
+
+                if($env->ENVIRONMENT === 'DEVELOPMENT'){
+                    $level = Logger::toMonologLevel(strtolower($env->LOG_LEVEL ?? LogLevel::DEBUG));
+                    $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir).'logs/retail.log';
+                    $logger = new Logger($prefix);
+                    $handler = new StreamHandler($path, $level);
+                    $handler->setFormatter(new JsonFormatter());
+                    $logger->pushHandler($handler);
+                    return $logger;
+                }
+                return new NullLogger();
+            };
+
+        }
         do_action($prefix . '_container_initialized', $this);
     }
     protected function services(): array

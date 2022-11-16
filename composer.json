@@ -14,5 +14,8 @@
             "email": "jeff@cannapress.tech"
         }
     ],
-    "require": {}
+    "require": {
+        "monolog/monolog": "^2.8",
+        "psr/container": "^2.0"
+    }
 }
