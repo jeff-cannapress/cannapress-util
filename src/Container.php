@@ -18,7 +18,7 @@ class Container implements \Psr\Container\ContainerInterface
             $providers[Env::class] = Container::singleton(fn($ctx)=> Env::create(trailingslashit($plugin_root_dir).'.env'));
         }
         if(!isset($providers[\Psr\Log\LoggerInterface::class])){
-            $providers[\Psr\Log\LoggerInterface::class] = function($ctx) use ($plugin_root_dir, $prefix){
+            $providers[\Psr\Log\LoggerInterface::class] = Container::singleton(function($ctx) use ($plugin_root_dir, $prefix){
                 $env = $ctx->get(Env::class)->create_child('CANNAPRESS');
 
                 if($env->ENVIRONMENT === 'DEVELOPMENT'){
@@ -31,8 +31,7 @@ class Container implements \Psr\Container\ContainerInterface
                     return $logger;
                 }
                 return new NullLogger();
-            };
-
+            });
         }
         do_action($prefix . '_container_initialized', $this);
     }
