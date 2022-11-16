@@ -4,26 +4,28 @@ declare(strict_types=1);
 
 namespace CannaPress\Util;
 
+use CannaPress\Retail\DependsOn;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Psr\Log\LogLevel;
 use Psr\Log\NullLogger;
+use ReflectionClass;
 
 class Container implements \Psr\Container\ContainerInterface
 {
     public function __construct($plugin_root_dir, private $prefix, private array $providers)
     {
-        if(!isset($providers[Env::class])){
-            $this->providers[Env::class] = Container::singleton(fn($ctx)=> Env::create(trailingslashit($plugin_root_dir).'.env'));
+        if (!isset($this->providers[Env::class])) {
+            $this->providers[Env::class] = Container::singleton(fn ($ctx) => Env::create(trailingslashit($plugin_root_dir) . '.env'));
         }
-        if(!isset($providers[\Psr\Log\LoggerInterface::class])){
-            $this->providers[\Psr\Log\LoggerInterface::class] = Container::singleton(function($ctx) use ($plugin_root_dir, $prefix){
+        if (!isset($this->providers[\Psr\Log\LoggerInterface::class])) {
+            $this->providers[\Psr\Log\LoggerInterface::class] = Container::singleton(function ($ctx) use ($plugin_root_dir, $prefix) {
                 $env = $ctx->get(Env::class)->create_child('CANNAPRESS');
 
-                if($env->ENVIRONMENT === 'DEVELOPMENT'){
+                if ($env->ENVIRONMENT === 'DEVELOPMENT') {
                     $level = Logger::toMonologLevel(strtolower($env->LOG_LEVEL ?? LogLevel::DEBUG));
-                    $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir).'logs/retail.log';
+                    $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir) . 'logs/'.$prefix.'.log';
                     $logger = new Logger($prefix);
                     $handler = new StreamHandler($path, $level);
                     $handler->setFormatter(new JsonFormatter());
@@ -33,7 +35,45 @@ class Container implements \Psr\Container\ContainerInterface
                 return new NullLogger();
             });
         }
+        
+        $numeric =  array_values(array_filter(array_keys($this->providers), fn($k)=>is_int($k)));
+        foreach($numeric as $n){
+            $key = $this->providers[$n];
+            unset($this->providers[$n]);
+            $this->providers[$key] = $key;
+        }
+        $keys = array_keys($this->providers);
+        foreach ($keys as $service) {
+            if (is_string($this->providers[$service]) && class_exists($this->providers[$service])) {
+                $this->providers[$service] = self::create_provider($this->providers[$service]);
+            }
+            if(!is_callable($this->providers[$service])){
+                $this->providers[$service] = self::singleton($this->providers[$service]);
+            }
+        }
         do_action($prefix . '_container_initialized', $this);
+    }
+    protected function create_provider(string $service_impl)
+    {
+        $clazz = new ReflectionClass($service_impl);
+        $constructor = $clazz->getConstructor();
+        $argTypes = [];
+        foreach ($constructor->getParameters() as $p) {
+            $attrs = $p->getAttributes(DependsOn::class);
+            if (!empty($attrs)) {
+                $argTypes[] = $attrs[0]->newInstance()->service_name;
+            } else {
+                $argTypes[] = $p->getType()->getName();
+            }
+        }
+        $argTypes = array_map(fn (\ReflectionParameter $p) => $p->getType()->getName(), $constructor->getParameters());
+        return self::singleton(function ($ctx) use ($clazz, $argTypes) {
+            $args = [];
+            foreach ($argTypes as $type) {
+                $args[] = $ctx->get($type);
+            }
+            return $clazz->newInstanceArgs($args);
+        });
     }
     protected function services(): array
     {

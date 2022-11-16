@@ -34,16 +34,11 @@ class RequestContext
     public KeyedCollection $form;
     private KeyedCollection $_server;
     public KeyedCollection $items;
-    public function __construct(KeyedCollection $_get, KeyedCollection $_post, KeyedCollection $_server)
+    public function __construct(?KeyedCollection $_get = null, ?KeyedCollection $_post= null, ?KeyedCollection $_server= null)
     {
         $this->items = new KeyedCollection();
-        $this->query = $_get;
-        $this->form = $_post;
-        $this->_server = $_server;
-    }
-
-    public static function from_globals(): RequestContext
-    {
-        return new RequestContext(KeyedCollection::direct($_GET), KeyedCollection::direct($_POST), KeyedCollection::direct($_SERVER));
+        $this->query = $_get ?? KeyedCollection::direct($_GET);
+        $this->form = $_post ?? KeyedCollection::direct($_POST);
+        $this->_server = $_server ??  KeyedCollection::direct($_SERVER);
     }
 }
