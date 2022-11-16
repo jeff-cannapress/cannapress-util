@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace CannaPress\Util;
 
-use CannaPress\Retail\DependsOn;
+use CannaPress\Util\DependsOn;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
