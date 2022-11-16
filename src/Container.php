@@ -25,7 +25,7 @@ class Container implements \Psr\Container\ContainerInterface
 
                 if ($env->ENVIRONMENT === 'DEVELOPMENT') {
                     $level = Logger::toMonologLevel(strtolower($env->LOG_LEVEL ?? LogLevel::DEBUG));
-                    $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir) . 'logs/'.$prefix.'.log';
+                    $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir) . 'logs/' . $prefix . '.log';
                     $logger = new Logger($prefix);
                     $handler = new StreamHandler($path, $level);
                     $handler->setFormatter(new JsonFormatter());
@@ -35,9 +35,9 @@ class Container implements \Psr\Container\ContainerInterface
                 return new NullLogger();
             });
         }
-        
-        $numeric =  array_values(array_filter(array_keys($this->providers), fn($k)=>is_int($k)));
-        foreach($numeric as $n){
+
+        $numeric =  array_values(array_filter(array_keys($this->providers), fn ($k) => is_int($k)));
+        foreach ($numeric as $n) {
             $key = $this->providers[$n];
             unset($this->providers[$n]);
             $this->providers[$key] = $key;
@@ -47,19 +47,69 @@ class Container implements \Psr\Container\ContainerInterface
             if (is_string($this->providers[$service]) && class_exists($this->providers[$service])) {
                 $this->providers[$service] = self::create_provider($this->providers[$service]);
             }
-            if(!is_callable($this->providers[$service])){
+            if (!is_callable($this->providers[$service])) {
                 $this->providers[$service] = self::singleton($this->providers[$service]);
             }
         }
         do_action($prefix . '_container_initialized', $this);
     }
+    protected function register_container_hooks()
+    {
+        $actions = $this->get_reflected_hooks();
+        $services = [];
+        foreach ($actions as $action_name => $hooks) {
+            foreach ($hooks as $hook) {
+                if (!isset($services[$hook->service])) {
+                    $t = $this->get($hook->service);
+                    $services[$hook->service] = $t;
+                }
+                add_action($action_name, [$services[$hook->service], $hook->method], $hook->priority, $hook->accepted_args);
+            }
+        }
+    }
+    protected function get_reflected_hooks()
+    {
+        $results = [];
+        foreach ($this->services() as $s) {
+            if (class_exists($s)) {
+                $clazz = new ReflectionClass($s);
+
+                foreach ($clazz->getAttributes(ActionHook::class) as $attr) {
+                    /** @var ActionHook */ $inst = $attr->newInstance();
+                    try {
+                        $inst->method = $clazz->getMethod($inst->method_name);
+                        if (!isset($results[$inst->hook_name])) {
+                            $results[$inst->hook_name] = [];
+                        }
+                        $results[$inst->hook_name][] = (object)['service' => $s, 'method' => $inst->method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($inst->method->getParameters())];
+                    } catch (\ReflectionException) {
+                        //snarf;
+                    }
+                }
+                foreach ($clazz->getMethods() as $method) {
+                    foreach ($method->getAttributes(ActionHook::class) as $attr) {
+                        $inst = $attr->newInstance();
+                        if (!isset($inst->hook_name)) {
+                            $inst->hook_name = preg_replace('/^on_/', '', $method->name, 1);
+                        }
+                        if (!isset($results[$inst->hook_name])) {
+                            $results[$inst->hook_name] = [];
+                        }
+                        $results[$inst->hook_name][] = (object)['service' => $s, 'method' => $method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($method->getParameters())];
+                    }
+                }
+            }
+        }
+        return $results;
+    }
+
     protected function create_provider(string $service_impl)
     {
         $clazz = new ReflectionClass($service_impl);
         $constructor = $clazz->getConstructor();
-        if($constructor === null){
-            return self::singleton(fn($ctx)=> new $service_impl());
-        }        
+        if ($constructor === null) {
+            return self::singleton(fn ($ctx) => new $service_impl());
+        }
         $argTypes = [];
         foreach ($constructor->getParameters() as $p) {
             $attrs = $p->getAttributes(DependsOn::class);
@@ -69,7 +119,7 @@ class Container implements \Psr\Container\ContainerInterface
                 $argTypes[] = $p->getType()->getName();
             }
         }
-        
+
         return self::singleton(function ($ctx) use ($clazz, $argTypes) {
             $args = [];
             foreach ($argTypes as $type) {
