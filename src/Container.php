@@ -57,6 +57,9 @@ class Container implements \Psr\Container\ContainerInterface
     {
         $clazz = new ReflectionClass($service_impl);
         $constructor = $clazz->getConstructor();
+        if($constructor === null){
+            return self::singleton(fn($ctx)=> new $service_impl());
+        }        
         $argTypes = [];
         foreach ($constructor->getParameters() as $p) {
             $attrs = $p->getAttributes(DependsOn::class);
@@ -66,7 +69,7 @@ class Container implements \Psr\Container\ContainerInterface
                 $argTypes[] = $p->getType()->getName();
             }
         }
-        $argTypes = array_map(fn (\ReflectionParameter $p) => $p->getType()->getName(), $constructor->getParameters());
+        
         return self::singleton(function ($ctx) use ($clazz, $argTypes) {
             $args = [];
             foreach ($argTypes as $type) {
