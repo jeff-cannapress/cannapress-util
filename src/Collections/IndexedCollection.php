@@ -34,7 +34,27 @@ class IndexedCollection implements \ArrayAccess, FluentCollection
         }
         return $result;
     }
-
+    public function slice(int $offset, ?int $length) : IndexedCollection{
+        return self::direct(array_slice($this->inner, $offset, $length));
+    }
+    public function splice(int $offset, ?int $length = null, mixed $replacement = []){
+        $values = array_splice($this->inner, $offset, $length, $replacement);
+        return self::direct($values);
+    }
+    public function push(mixed ...$items): IndexedCollection{
+        array_push($this->inner, ...$items);
+        return $this;
+    }
+    public function pop(): mixed{
+        return array_pop($this->inner);
+    }
+    public function unshift(mixed ...$items): IndexedCollection{
+        array_unshift($this->inner, ...$items);
+        return $this;
+    }
+    public function shift(): mixed{
+        return array_pop($this->inner);
+    }
     public function rewind(): void
     {
         reset($this->inner);

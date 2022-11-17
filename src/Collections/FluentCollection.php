@@ -13,7 +13,7 @@ interface FluentCollection extends \Iterator
     public function flat(): FluentCollection;
     public function reduce(callable $reducer, $inital_value = null): mixed;
     public function every(callable $predicate = null): bool;
-    public function some(callable $predicate): bool;
+    public function some(callable $predicate = null): bool;
     public function none(callable $predicate): bool;
     public function includes($value, callable $equality_comparitor = null): bool;
     public function group_by($key_selector, callable $value_selector = null): FluentCollection;

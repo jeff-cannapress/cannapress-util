@@ -189,8 +189,11 @@ class FluentIterator implements FluentCollection
         return true;
     }
 
-    public function some(callable $predicate): bool
+    public function some(callable $predicate = null): bool
     {
+        if(is_null($predicate)){
+            $predicate = fn($x)=>true;
+        }
         foreach ($this as $item) {
             if ($predicate($item)) {
                 return true;

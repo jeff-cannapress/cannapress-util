@@ -35,7 +35,7 @@ trait ImplementsFluentCollection
     {
         return $this->as_fluent()->every($predicate);
     }
-    public function some(callable $predicate): bool
+    public function some(callable $predicate = null): bool
     {
         return $this->as_fluent()->some($predicate);
     }

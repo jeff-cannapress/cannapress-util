@@ -33,7 +33,9 @@ class KeyedCollection implements \ArrayAccess, FluentCollection
         }
         return $result;
     }
-
+    public function flip(): KeyedCollection{
+        return self::direct(array_flip($this->inner));
+    }
     public function rewind(): void
     {
         reset($this->inner);
