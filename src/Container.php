@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace CannaPress\Util;
 
 use CannaPress\Util\DependsOn;
-use CannaPress\Util\Templates\PathResolver;
-use CannaPress\Util\Templates\TemplateManager;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -75,31 +73,43 @@ class Container implements \Psr\Container\ContainerInterface
         $results = [];
         foreach ($this->services() as $s) {
             if (class_exists($s)) {
-                $clazz = new ReflectionClass($s);
+                $key = 'cps_svc_hooks_'.md5($s);
+                $service_hooks = get_transient($key);
+                if($service_hooks === false){
+                    $service_hooks = [];
+                    $clazz = new ReflectionClass($s);
 
-                foreach ($clazz->getAttributes(ActionHook::class) as $attr) {
-                    /** @var ActionHook */ $inst = $attr->newInstance();
-                    try {
-                        $inst->method = $clazz->getMethod($inst->method_name);
-                        if (!isset($results[$inst->hook_name])) {
-                            $results[$inst->hook_name] = [];
+                    foreach ($clazz->getAttributes(ActionHook::class) as $attr) {
+                        /** @var ActionHook */ $inst = $attr->newInstance();
+                        try {
+                            $inst->method = $clazz->getMethod($inst->method_name);
+                            if (!isset($service_hooks[$inst->hook_name])) {
+                                $service_hooks[$inst->hook_name] = [];
+                            }
+                            $service_hooks[$inst->hook_name][] = (object)['service' => $s, 'method' => $inst->method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($inst->method->getParameters())];
+                        } catch (\ReflectionException) {
+                            //snarf;
                         }
-                        $results[$inst->hook_name][] = (object)['service' => $s, 'method' => $inst->method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($inst->method->getParameters())];
-                    } catch (\ReflectionException) {
-                        //snarf;
                     }
+                    foreach ($clazz->getMethods() as $method) {
+                        foreach ($method->getAttributes(ActionHook::class) as $attr) {
+                            $inst = $attr->newInstance();
+                            if (!isset($inst->hook_name)) {
+                                $inst->hook_name = preg_replace('/^on_/', '', $method->name, 1);
+                            }
+                            if (!isset($service_hooks[$inst->hook_name])) {
+                                $service_hooks[$inst->hook_name] = [];
+                            }
+                            $service_hooks[$inst->hook_name][] = (object)['service' => $s, 'method' => $method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($method->getParameters())];
+                        }
+                    }
+                    set_transient($key, $service_hooks);
                 }
-                foreach ($clazz->getMethods() as $method) {
-                    foreach ($method->getAttributes(ActionHook::class) as $attr) {
-                        $inst = $attr->newInstance();
-                        if (!isset($inst->hook_name)) {
-                            $inst->hook_name = preg_replace('/^on_/', '', $method->name, 1);
-                        }
-                        if (!isset($results[$inst->hook_name])) {
-                            $results[$inst->hook_name] = [];
-                        }
-                        $results[$inst->hook_name][] = (object)['service' => $s, 'method' => $method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($method->getParameters())];
+                foreach($service_hooks as $hook_name => $metas){
+                    if(!isset($results[$hook_name])){
+                        $results[$hook_name] = [];
                     }
+                    $results[$hook_name] = array_merge($results[$hook_name], $metas);
                 }
             }
         }
@@ -108,27 +118,30 @@ class Container implements \Psr\Container\ContainerInterface
 
     protected function create_provider(string $service_impl)
     {
-        $clazz = new ReflectionClass($service_impl);
-        $constructor = $clazz->getConstructor();
-        if ($constructor === null) {
-            return self::singleton(fn ($ctx) => new $service_impl());
-        }
-        $argTypes = [];
-        foreach ($constructor->getParameters() as $p) {
-            $attrs = $p->getAttributes(DependsOn::class);
-            if (!empty($attrs)) {
-                $argTypes[] = $attrs[0]->newInstance()->service_name;
-            } else {
-                $argTypes[] = $p->getType()->getName();
+        $key = 'cps_svc_args_'.md5($service_impl);
+        $arg_types = get_transient($key);
+        if($arg_types === false){
+            $arg_types = [];
+            $clazz = new ReflectionClass($service_impl);
+            $constructor = $clazz->getConstructor();
+            if ($constructor !== null) {
+                foreach ($constructor->getParameters() as $p) {
+                    $attrs = $p->getAttributes(DependsOn::class);
+                    if (!empty($attrs)) {
+                        $arg_types[] = $attrs[0]->newInstance()->service_name;
+                    } else {
+                        $arg_types[] = $p->getType()->getName();
+                    }
+                }
             }
+            set_transient($key, $arg_types);
         }
-
-        return self::singleton(function ($ctx) use ($clazz, $argTypes) {
+        return self::singleton(function ($ctx) use ($service_impl, $arg_types) {
             $args = [];
-            foreach ($argTypes as $type) {
+            foreach ($arg_types as $type) {
                 $args[] = $ctx->get($type);
             }
-            return $clazz->newInstanceArgs($args);
+            return new $service_impl(...$args);
         });
     }
     protected function services(): array
