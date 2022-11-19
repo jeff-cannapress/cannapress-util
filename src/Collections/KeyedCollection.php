@@ -33,7 +33,8 @@ class KeyedCollection implements \ArrayAccess, FluentCollection
         }
         return $result;
     }
-    public function flip(): KeyedCollection{
+    public function flip(): KeyedCollection
+    {
         return self::direct(array_flip($this->inner));
     }
     public function rewind(): void
@@ -87,7 +88,8 @@ class KeyedCollection implements \ArrayAccess, FluentCollection
     }
     private static function make_pair($key, $value)
     {
-        return (object) new class ($key, $value) {
+        return (object) new class($key, $value)
+        {
             public function __construct(public $key, public $value)
             {
             }
@@ -134,10 +136,12 @@ class KeyedCollection implements \ArrayAccess, FluentCollection
     {
         return IndexedCollection::direct(array_values($this->inner));
     }
-    public function keys(): IndexedCollection{
+    public function keys(): IndexedCollection
+    {
         return IndexedCollection::direct(array_keys($this->inner));
     }
-    public function values(): IndexedCollection{
+    public function values(): IndexedCollection
+    {
         return IndexedCollection::direct(array_values($this->inner));
     }
 }
