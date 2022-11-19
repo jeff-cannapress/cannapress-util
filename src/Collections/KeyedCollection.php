@@ -134,4 +134,10 @@ class KeyedCollection implements \ArrayAccess, FluentCollection
     {
         return IndexedCollection::direct(array_values($this->inner));
     }
+    public function keys(): IndexedCollection{
+        return IndexedCollection::direct(array_keys($this->inner));
+    }
+    public function values(): IndexedCollection{
+        return IndexedCollection::direct(array_values($this->inner));
+    }
 }
