@@ -8,7 +8,7 @@ class Lazy
 {
     private $have_constructed = false;
     private $inner_value = null;
-    public function __construct(private callable $factory)
+    public function __construct(private $factory)
     {
     }
     public function __get($name)
