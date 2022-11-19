@@ -15,6 +15,30 @@ class MetaInfo
     {
         $this->props = $props;
     }
+    public static function sub_class(string $prop, string $class_name, ...$metas)
+    {
+        return new class($prop, $class_name, $metas)
+        {
+            public function __construct(private string $prop, private $class_name, private array $metas)
+            {
+            }
+            public function persist($entity_id, $the_entity)
+            {
+                $prop = $the_entity->{$this->prop};
+                foreach ($this->metas as $meta) {
+                    $meta->persist($entity_id, $prop);
+                }
+            }
+            public function load(object $the_entity, array $all_metas)
+            {
+                $value = new $this->class_name();
+                foreach ($this->metas as $meta) {
+                    $meta->load($value, $all_metas);
+                }
+                $the_entity->{$this->prop} = $value;
+            }
+        };
+    }
     public static function json_prop(string $name, string $key, bool $associatve = false)
     {
         return new class($name, $key, $associatve)
@@ -31,9 +55,9 @@ class MetaInfo
                     $the_entity->{$this->prop} = json_decode($strval, $this->associatve);
                 }
             }
-            public function persist($the_entity)
+            public function persist($entity_id, $the_entity)
             {
-                update_post_meta($the_entity->ID, $this->meta_key, json_encode($the_entity->{($this->prop)}));
+                update_post_meta($entity_id, $this->meta_key, json_encode($the_entity->{($this->prop)}));
             }
         };
     }
@@ -52,13 +76,13 @@ class MetaInfo
                     $the_entity->{$this->prop} = new DateTimeZone($data);
                 }
             }
-            public function persist($the_entity)
+            public function persist($entity_id, $the_entity)
             {
                 if (!is_null($the_entity->{($this->prop)})) {
-                    $val = is_string($the_entity->{($this->prop)})? $the_entity->{($this->prop)} : $the_entity->{($this->prop)}->getName();
-                    update_post_meta($the_entity->ID, $this->meta_key, $val);
+                    $val = is_string($the_entity->{($this->prop)}) ? $the_entity->{($this->prop)} : $the_entity->{($this->prop)}->getName();
+                    update_post_meta($entity_id, $this->meta_key, $val);
                 } else {
-                    delete_post_meta($the_entity->ID, $this->meta_key);
+                    delete_post_meta($entity_id, $this->meta_key);
                 }
             }
         };
@@ -80,14 +104,14 @@ class MetaInfo
                     $the_entity->{$this->prop} = DateTimeImmutable::createFromFormat(DateTimeImmutable::ISO8601, $data)->setTimezone(new DateTimeZone($tzval));
                 }
             }
-            public function persist($the_entity)
+            public function persist($entity_id, $the_entity)
             {
                 if (!is_null($the_entity->{($this->prop)})) {
-                    update_post_meta($the_entity->ID, $this->meta_key, $the_entity->{($this->prop)}->setTimezone(new DateTimeZone('UTC'))->format(DateTimeImmutable::ISO8601));
-                    update_post_meta($the_entity->ID, $this->meta_key . '_tz', $the_entity->{($this->prop)}->getTimezone()->getName());
+                    update_post_meta($entity_id, $this->meta_key, $the_entity->{($this->prop)}->setTimezone(new DateTimeZone('UTC'))->format(DateTimeImmutable::ISO8601));
+                    update_post_meta($entity_id, $this->meta_key . '_tz', $the_entity->{($this->prop)}->getTimezone()->getName());
                 } else {
-                    delete_post_meta($the_entity->ID, $this->meta_key);
-                    delete_post_meta($the_entity->ID, $this->meta_key . '_tz');
+                    delete_post_meta($entity_id, $this->meta_key);
+                    delete_post_meta($entity_id, $this->meta_key . '_tz');
                 }
             }
         };
@@ -119,10 +143,10 @@ class MetaInfo
                 $strval = MetaInfo::get_meta_value($all_metas, $this->meta_key, $this->default, is_array($this->default));
                 $the_entity->{$this->prop} = $this->coerce_loaded($strval);
             }
-            public function persist($the_entity)
+            public function persist($entity_id, $the_entity)
             {
                 $to_save = $this->coerce_saving($the_entity->{($this->prop)});
-                update_post_meta($the_entity->ID, $this->meta_key, $to_save);
+                update_post_meta($entity_id, $this->meta_key, $to_save);
             }
             public function coerce_saving($value)
             {
