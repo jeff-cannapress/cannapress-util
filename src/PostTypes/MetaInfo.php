@@ -116,25 +116,26 @@ class MetaInfo
             }
         };
     }
-    public static function prop($name, $key, $default)
+    public static function prop($name, $key, $default, callable $on_save = null, callable $on_load = null)
     {
-        return new class($name, $key, $default)
+        return new class($name, $key, $default,$on_save, $on_load)
         {
-            public function __construct(private $prop, private $meta_key, private $default)
+            public function __construct(private $prop, private $meta_key, private $default, private $on_save = null, private $on_load = null)
             {
             }
             public function coerce_loaded($value)
             {
                 if (!is_null($this->default)) {
                     if (is_int($this->default)) {
-                        return intval($value);
+                        $value = intval($value);
                     } elseif (is_float($this->default)) {
-                        return floatval($value);
+                        $value = floatval($value);
                     } elseif (is_bool($this->default)) {
-                        return boolval($value);
-                    } elseif ($this->default instanceof DateTimeInterface) {
-                        return \DateTime::createFromFormat('Y-m-d', $value);
-                    }
+                        $value= boolval($value);
+                    } 
+                }
+                if(!is_null($this->on_load)){
+                    $value = ($this->on_load)($value);
                 }
                 return $value;
             }
@@ -150,8 +151,8 @@ class MetaInfo
             }
             public function coerce_saving($value)
             {
-                if ($value instanceof DateTimeInterface) {
-                    return $value->format('Y-m-d');
+                if(!is_null($this->on_save)){
+                    $value = ($this->on_save)($value);
                 }
                 return $value;
             }
@@ -180,10 +181,10 @@ class MetaInfo
         }
         return null;
     }
-    public function persist_metas($the_entity)
+    public function persist_metas($id, $the_entity)
     {
         foreach ($this->props as $prop) {
-            $prop->persist($the_entity);
+            $prop->persist($id, $the_entity);
         }
     }
 }
