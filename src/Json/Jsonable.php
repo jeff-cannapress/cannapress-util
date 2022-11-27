@@ -39,7 +39,7 @@ trait Jsonable
     {
         $result = [];
         foreach (self::json_metas() as  $meta) {
-            $result[$meta->key()] = $meta->serialize($this);
+            $meta->serialize($result, $this);
         }
         return $result;
     }

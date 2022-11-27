@@ -11,32 +11,33 @@ abstract class MetaInfo
 {
 
     public abstract function load(object $instance, array $json): void;
-    public abstract function key(): string;
-    public abstract function serialize($instance);
 
-    public static function datetime(string $prop)
+    public abstract function serialize(array &$result, $instance): void;
+
+    public static function datetime(string $prop, ?string $json_prop = null)
     {
         return self::prop(
             $prop,
             null,
             fn ($x) => !empty($x) ? DateTimeImmutable::createFromFormat(DateTimeImmutable::ISO8601, $x) : null,
-            fn ($x) => $x?->format(DateTimeImmutable::ISO8601)
+            fn ($x) => $x?->format(DateTimeImmutable::ISO8601),
+            $json_prop
         );
     }
-    public static function instance(string $prop, string $clazz)
+    public static function instance(string $prop, string $clazz, ?string $json_prop = null)
     {
-        return new class($prop, $clazz) extends MetaInfo
+        if (is_null($json_prop)) {
+            $json_prop = $prop;
+        }
+        return new class($prop, $clazz, $json_prop) extends MetaInfo
         {
-            public function __construct(private string $prop, private string $clazz)
+            public function __construct(private string $prop, private string $clazz, private string $json_prop)
             {
             }
-            public function key(): string
-            {
-                return $this->prop;
-            }
+
             public function load(object $instance, array|object $json): void
             {
-                $value = isset($json[$this->prop]) ? $json[$this->prop] : null;
+                $value = isset($json[$this->json_prop]) ? $json[$this->json_prop] : null;
                 try {
                     $to_assign = call_user_func([$this->clazz, 'loadInstance'], (new ($this->clazz)()), $value);
                     $instance->{$this->prop} = $to_assign;
@@ -44,17 +45,14 @@ abstract class MetaInfo
                     var_dump($err);
                 }
             }
-            public function serialize($instance)
+            public function serialize(array &$result, $instance): void
             {
                 $value = $instance->{$this->prop};
-                if ($value) {
-                    return $value->jsonSerialize();
-                }
-                return null;
+                $result[$this->json_prop] = $value->jsonSerialize();
             }
         };
     }
-    public static function prop(string $prop, mixed $default = null, callable $coerce_load = null, callable $coerce_save = null): MetaInfo
+    public static function prop(string $prop, mixed $default = null, callable $coerce_load = null, callable $coerce_save = null, ?string $json_prop = null): MetaInfo
     {
         if (is_null($coerce_load)) {
             $coerce_load = fn ($x) => $x;
@@ -66,25 +64,28 @@ abstract class MetaInfo
             $value = $default;
             $default = fn () => $value;
         }
-        return new class($prop, $default, $coerce_load, $coerce_save) extends MetaInfo
+        if (is_null($json_prop)) {
+            $json_prop = $prop;
+        }
+        return new class($prop, $default, $coerce_load, $coerce_save, $json_prop) extends MetaInfo
         {
-            public function __construct(private string $prop, private  $default, private $coerce_load, private $coerce_save)
+            public function __construct(private string $prop, private  $default, private $coerce_load, private $coerce_save, private string $json_prop)
             {
             }
             public function key(): string
             {
-                return $this->prop;
+                return $this->json_prop;
             }
             public function load(object $instance, array $json): void
             {
-                $value = isset($json[$this->prop]) ? $json[$this->prop] : ($this->default)();
+                $value = isset($json[$this->json_prop]) ? $json[$this->json_prop] : ($this->default)();
                 $value = ($this->coerce_load)($value);
                 $instance->{$this->prop} = $value;
             }
-            public function serialize($instance)
+            public function serialize(array &$result, $instance): void
             {
                 $value = $instance->{$this->prop};
-                return ($this->coerce_save)($value);
+                $result[$this->json_prop] = ($this->coerce_save)($value);
             }
         };
     }
