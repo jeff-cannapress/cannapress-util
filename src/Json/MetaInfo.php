@@ -34,12 +34,14 @@ abstract class MetaInfo
             {
                 return $this->prop;
             }
-            public function load(object $instance, array $json): void
+            public function load(object $instance, array|object $json): void
             {
                 $value = isset($json[$this->prop]) ? $json[$this->prop] : null;
                 try {
-                    $instance->{$this->prop} = call_user_func([$this->clazz, 'loadInstance'], (new ($this->clazz)()), $value);
+                    $to_assign = call_user_func([$this->clazz, 'loadInstance'], (new ($this->clazz)()), $value);
+                    $instance->{$this->prop} = $to_assign;
                 } catch (\TypeError $err) {
+                    var_dump($err);
                 }
             }
             public function serialize($instance)

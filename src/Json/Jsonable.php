@@ -26,7 +26,9 @@ trait Jsonable
 
     public static function jsonDeserialize($json)
     {
-        return self::loadInstance(new self(), $json);
+        $clazz = get_called_class();
+        $instance = new $clazz();
+        return self::loadInstance($instance, $json);
     }
     public function __toString()
     {

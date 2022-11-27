@@ -141,13 +141,23 @@ class MetaInfo
             }
             public function load(object $the_entity, array $all_metas)
             {
-                $strval = MetaInfo::get_meta_value($all_metas, $this->meta_key, $this->default, is_array($this->default));
+                $multiple = is_array($this->default);
+                $strval = MetaInfo::get_meta_value($all_metas, $this->meta_key, $this->default, $multiple);
                 $the_entity->{$this->prop} = $this->coerce_loaded($strval);
             }
             public function persist($entity_id, $the_entity)
             {
+                $multiple = is_array($this->default);
                 $to_save = $this->coerce_saving($the_entity->{($this->prop)});
-                update_post_meta($entity_id, $this->meta_key, $to_save);
+                if($multiple){
+                    delete_post_meta($entity_id, $this->meta_key);
+                    foreach($to_save as $value){
+                        add_post_meta($entity_id, $this->meta_key, $value);
+                    }
+                }
+                else{
+                    update_post_meta($entity_id, $this->meta_key, $to_save);
+                }
             }
             public function coerce_saving($value)
             {
@@ -173,8 +183,8 @@ class MetaInfo
     {
         if ($the_entity->ID) {
             $the_post = get_post($the_entity->ID);
-            foreach ($this->props as $prop) {
-                $all_metas = get_post_meta($the_entity->ID);
+            $all_metas = get_post_meta($the_entity->ID);
+            foreach ($this->props as $prop) {                
                 $prop->load($the_entity, $all_metas);
             }
             return $the_post;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace CannaPress\Util\Net;
 
-use CannaPress\Retail\Imports\ApiUtil;
+
 
 class URI
 {
@@ -42,9 +42,6 @@ class URI
                 }
             }
             $this->fragment = parse_url($url, PHP_URL_FRAGMENT);
-        }
-        if (is_array($url) || is_object($url)) {
-            ApiUtil::loadFromJson($this, $url);
         }
     }
 
