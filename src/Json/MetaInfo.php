@@ -48,7 +48,7 @@ abstract class MetaInfo
             public function serialize(array &$result, $instance): void
             {
                 $value = $instance->{$this->prop};
-                $result[$this->json_prop] = $value->jsonSerialize();
+                $result[$this->json_prop] = $value?->jsonSerialize();
             }
         };
     }
