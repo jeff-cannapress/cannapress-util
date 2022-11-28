@@ -24,11 +24,12 @@ abstract class MetaInfo
             $json_prop
         );
     }
-    public static function instance(string $prop, string $clazz, ?string $json_prop = null)
+    public static function instance(string $prop, string $clazz,  ?string $json_prop = null)
     {
         if (is_null($json_prop)) {
             $json_prop = $prop;
         }
+
         return new class($prop, $clazz, $json_prop) extends MetaInfo
         {
             public function __construct(private string $prop, private string $clazz, private string $json_prop)
@@ -39,7 +40,8 @@ abstract class MetaInfo
             {
                 $value = isset($json[$this->json_prop]) ? $json[$this->json_prop] : null;
                 try {
-                    $to_assign = call_user_func([$this->clazz, 'loadInstance'], (new ($this->clazz)()), $value);
+                    $to_assign = new ($this->clazz)();
+                    call_user_func([$this->clazz, 'loadInstance'], $to_assign, $value);
                     $instance->{$this->prop} = $to_assign;
                 } catch (\TypeError $err) {
                     var_dump($err);
