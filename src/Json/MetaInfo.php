@@ -35,7 +35,7 @@ abstract class MetaInfo
 
         return new class($prop, $clazz, $default, $json_prop) extends MetaInfo
         {
-            public function __construct(private string $prop, private string $clazz, private callable $default,  private string $json_prop)
+            public function __construct(private string $prop, private string $clazz, private $default,  private string $json_prop)
             {
             }
 
