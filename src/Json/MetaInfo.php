@@ -89,4 +89,20 @@ abstract class MetaInfo
             }
         };
     }
+
+    public static function loadProps(object $instance, $json): object
+    {
+        if (is_object($instance)) {
+            if (is_string($json)) {
+                $json = json_decode($json);
+            }
+            if (is_object($json)) {
+                $json = get_object_vars($json);
+            }
+            foreach ($json as $key => $value) {
+                $instance->{$key} = $value;
+            }
+        }
+        return $instance;
+    }
 }
