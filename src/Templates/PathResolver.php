@@ -4,44 +4,45 @@ declare(strict_types=1);
 
 namespace CannaPress\Util\Templates;
 
+use CannaPress\Util\TransientCache;
+
 class PathResolver
 {
-    private array $template_path_cache = [];
 
+    protected FileResolver $files;
+    protected TransientCache $path_cache;
     public function __construct(
-        protected string $theme_template_directory,
-        protected string $plugin_template_directory
+        protected DirectoryResolver $dirs,
+        FileResolver|null $files = null,
+        TransientCache|null $path_cache = null
     ) {
+        $this->files = $files ?? new FileResolver();
+        $this->path_cache = $path_cache ?? new TransientCache(TemplateManager::filter_prefix);
     }
     protected function apply_filter($name, $item, ...$rest)
     {
         return TemplateManager::apply_filters($name, ...[$item, ...$rest]);
     }
-    protected function get_file_names($name, $prefer = 'php')
+    public function child_resolver(string $path)
     {
-        $name = untrailingslashit($name);
-        $templates = [];
-        if ($prefer === 'php') {
-            $templates[] = $name . '.php';
-            $templates[] = $name . '.html';
-            $templates[] = trailingslashit($name) . 'index.php';
-            $templates[] = trailingslashit($name) . 'index.html';
-        } else {
-            $templates[] = $name . '.html';
-            $templates[] = $name . '.php';
-            $templates[] = trailingslashit($name) . 'index.html';
-            $templates[] = trailingslashit($name) . 'index.php';
-        }
-        return $this->apply_filter(__FUNCTION__, $templates, $name);
+        return new PathResolver($this->dirs->child_resolver($path), $this->files, $this->path_cache);
     }
-    public function get_template_absolute_filename(string $name, $prefer = 'php'): string
+
+    public function get_absolute_filename(string $name, array $extensions = ['php', 'html']): string
     {
-        $file_name = $this->apply_filter('before_' . __FUNCTION__, null, $name);
+        $file_name = $this->apply_filter('before_' . __FUNCTION__, null, $name, $extensions);
         if (empty($file_name)) {
-            $templates = $this->get_file_names($name, $prefer);
-            $file_name = $this->select_file($templates, $name);
-            $file_name = $this->apply_filter(__FUNCTION__, $file_name, $name);
+            $cache_key = $name . '.' . (implode('|', $extensions));
+            $file_name = $this->path_cache->get($cache_key);
+            if ($file_name === false) {
+                $possible_paths = $this->get_all_possible_paths($name, $extensions);
+                $file_name = self::find_first_existing_file($possible_paths);
+                if (!empty($file_name)) {
+                    $this->path_cache->set($cache_key, $file_name, 60 * 5/* 5min */);
+                }
+            }
         }
+        $file_name = $this->apply_filter(__FUNCTION__, $file_name, $name);
         if (false === $file_name) {
             return "";
         }
@@ -49,26 +50,13 @@ class PathResolver
     }
     public function get_template_identifier(string $name): string
     {
-        return $this->plugin_template_directory . '/' . ltrim($name, '/\\');
+        return $this->dirs->get_template_identifier($name);
     }
-
-    protected function select_file($template_names, $name)
+    public static function name(string $name)
     {
-        $cache_key = is_array($template_names) ? $template_names[0] : $template_names;
-        if (isset($this->template_path_cache[$cache_key])) {
-            $located = $this->template_path_cache[$cache_key];
-        } else {
-            $possible_paths = $this->enumerate_possible_files($template_names, $cache_key, $name);
-            $located = self::select_first_file($possible_paths);
-            if ($located) {
-                $this->template_path_cache[$cache_key] = $located;
-            }
-        }
-        $located = $this->apply_filter(__FUNCTION__, $located, $name);
-        $this->template_path_cache[$cache_key] = $located;
-        return $located;
+        return self::class . '/' . $name;
     }
-    public static function select_first_file(array $possible_paths)
+    public static function find_first_existing_file(array $possible_paths)
     {
         foreach ($possible_paths as $file_name) {
             if (file_exists($file_name)) {
@@ -77,42 +65,18 @@ class PathResolver
         }
         return false;
     }
-    public function enumerate_possible_files(string|array $template_names, string $cache_key, $name)
-    {
-        // Remove empty entries.
-        $template_names = array_filter((array) $template_names);
-        $template_paths = $this->get_possible_template_folders();
-        $abs_paths = [];
 
-        foreach ($template_names as $template_name) {
-            $template_name = ltrim($template_name, '/');
-            foreach ($template_paths as $template_path) {
-                $abs_paths[] = $template_path . $template_name;
+    public function get_all_possible_paths(string $name, array $extensions = ['php', 'html'])
+    {
+        $file_names = $this->files->get_possible_file_names($name, $extensions);
+        $directories = $this->dirs->get_possible_template_folders();
+        $result = [];
+        foreach ($directories as $dir) {
+            foreach ($file_names as $file) {
+                $result[] = $dir . $file;
             }
         }
-        $abs_paths = $this->apply_filter(__FUNCTION__, $abs_paths, $cache_key, $template_names, $name);
-        return $abs_paths;
-    }
-
-    public function get_possible_template_folders()
-    {
-        $theme_directory = trailingslashit($this->theme_template_directory);
-
-        $file_paths = array(
-            10  => trailingslashit(get_template_directory()) . $theme_directory,
-            15  => get_template_directory(),
-            100000 => $this->plugin_template_directory,
-        );
-
-        // Only add this conditionally, so non-child themes don't redundantly check active theme twice.
-        if (get_stylesheet_directory() !== get_template_directory()) {
-            $file_paths[1] = trailingslashit(get_stylesheet_directory()) . $theme_directory;
-        }
-        // Sort the file paths based on priority.
-        ksort($file_paths, SORT_NUMERIC);
-
-        $file_paths = $this->apply_filter(__FUNCTION__, $file_paths);
-
-        return array_map('trailingslashit', $file_paths);
+        $result = $this->apply_filter(__FUNCTION__, $result, $name, $extensions);
+        return $result;
     }
 }

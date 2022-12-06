@@ -9,6 +9,7 @@ use Exception;
 
 class TemplateManager
 {
+    public const filter_prefix = 'cannapress_template_manager';
     public function __construct(
         protected Container $container,
         protected PathResolver $path_resolver
@@ -20,7 +21,7 @@ class TemplateManager
         if (is_string($function)) {
             $function = [$function];
         }
-        $filter_name = implode('__', ['cannapress_template_manager', ...$function]);
+        $filter_name = implode('__', [TemplateManager::filter_prefix, ...$function]);
         return apply_filters($filter_name, ...$args);
     }
     protected function get_template_factory_identifier($name): string
@@ -48,7 +49,7 @@ class TemplateManager
     public static function extract_parent_context($dbg)
     {
         $limit = min(12, count($dbg));
-        for ($i = 2; $i< $limit; $i++) {
+        for ($i = 2; $i < $limit; $i++) {
             if (isset($dbg[$i]['object'])) {
                 $name = get_class($dbg[$i]['object']);
                 $is_defined = defined("$name::CANNAPRESS_IS_TEMPLATE_INSTANCE");
@@ -78,7 +79,7 @@ class TemplateManager
         $instance = $this->find_template_part($name, $instance_props);
         $instance->emit();
     }
-        /**
+    /**
      * Renders a template out to the buffer
      */
     public function get_template_content($name, $instance_props = []): string
