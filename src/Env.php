@@ -51,10 +51,10 @@ class Env implements ArrayAccess, Iterator
         if (file_exists($source_file)) {
             $cache_key = 'cpscache:' . \CannaPress\Util\Hashes::fast( $source_file);
             $stamp = filemtime($source_file);
-            $cached_value = get_transient($cache_key);
+            $cached_value = \CannaPress\Util\TransientCache::get_transient($cache_key);
             if ($cached_value === false || $cached_value->filemtime !== $stamp) {
                 $cached_value = self::read_source_file_uncached($source_file);
-                set_transient($cache_key, $cached_value);
+                \CannaPress\Util\TransientCache::set_transient($cache_key, $cached_value);
             }
             return $cached_value->lines;
         }

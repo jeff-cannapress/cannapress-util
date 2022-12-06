@@ -74,7 +74,7 @@ class Container implements \Psr\Container\ContainerInterface
         foreach ($this->services() as $s) {
             if (class_exists($s)) {
                 $key = $this->prefix.'svc_hooks_'.\CannaPress\Util\Hashes::fast( $s);
-                $service_hooks = get_transient($key);
+                $service_hooks = \CannaPress\Util\TransientCache::get_transient($key);
                 if($service_hooks === false){
                     $service_hooks = [];
                     $clazz = new ReflectionClass($s);
@@ -103,7 +103,7 @@ class Container implements \Psr\Container\ContainerInterface
                             $service_hooks[$inst->hook_name][] = (object)['service' => $s, 'method' => $method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($method->getParameters())];
                         }
                     }
-                    set_transient($key, $service_hooks);
+                    \CannaPress\Util\TransientCache::set_transient($key, $service_hooks);
                 }
                 foreach($service_hooks as $hook_name => $metas){
                     if(!isset($results[$hook_name])){
@@ -119,7 +119,7 @@ class Container implements \Psr\Container\ContainerInterface
     protected function create_provider(string $service_impl)
     {
         $key = $this->prefix.'svc_args_'.\CannaPress\Util\Hashes::fast( $service_impl);
-        $arg_types = get_transient($key);
+        $arg_types = \CannaPress\Util\TransientCache::get_transient($key);
         if($arg_types === false){
             $arg_types = [];
             $clazz = new ReflectionClass($service_impl);
@@ -134,7 +134,7 @@ class Container implements \Psr\Container\ContainerInterface
                     }
                 }
             }
-            set_transient($key, $arg_types);
+            \CannaPress\Util\TransientCache::set_transient($key, $arg_types);
         }
         return self::singleton(function ($ctx) use ($service_impl, $arg_types) {
             $args = [];

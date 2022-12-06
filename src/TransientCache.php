@@ -22,28 +22,19 @@ class TransientCache
     {
         if (!isset($this->call_cache[$key])) {
             $transient_key = $this->make_transient_key($key);
-            $value = false;
-            if (function_exists('get_transient')) {
-                $value = get_transient($transient_key);
-            }
+            $value = self::get_transient($transient_key);
             if ($value === false) {
                 $value = $factory();
             }
             $this->call_cache[$key] = $value;
-            if (function_exists('set_transient')) {
-                set_transient($transient_key, $value, $expiration);
-            }
+            self::set_transient($transient_key, $value, $expiration);
         }
         return isset($this->call_cache[$key]) ? $this->call_cache[$key] : null;
     }
     public function get($key): mixed
     {
         if (!isset($this->call_cache[$key])) {
-            $value = false;
-            if (function_exists('get_transient')) {
-                $transient_key = $this->make_transient_key($key);
-                $value = get_transient($transient_key);
-            }
+            $value = self::get_transient($this->make_transient_key($key));
             if ($value !== false) {
                 $this->call_cache[$key] = $value;
             }
@@ -52,14 +43,23 @@ class TransientCache
     }
     public function set($key, $value, int $expiration = 0): bool
     {
-        $was_set = true;
-        if (function_exists('set_transient')) {
-            $transient_key = $this->make_transient_key($key);
-            set_transient($transient_key, $value, $expiration);
-        }
+        $was_set = self::set_transient($this->make_transient_key($key), $value, $expiration);
         if ($was_set) {
             $this->call_cache[$key] = $value;
         }
         return $was_set;
+    }
+
+    public static function get_transient(string $transient): mixed{
+        if (function_exists('get_transient')) {
+            return get_transient($transient);
+        }
+        return false;
+    }
+    public static function set_transient(string $transient, mixed $value, int $expiration =0) : bool{
+        if (function_exists('set_transient')) {
+            return set_transient($transient, $value, $expiration);
+        }
+        return true;
     }
 }
