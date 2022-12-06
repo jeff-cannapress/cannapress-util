@@ -10,7 +10,6 @@ class PathResolver
 
     public function __construct(
         protected string $theme_template_directory,
-        protected string $plugin_directory,
         protected string $plugin_template_directory
     ) {
     }
@@ -56,28 +55,29 @@ class PathResolver
     protected function select_file($template_names, $name)
     {
         $cache_key = is_array($template_names) ? $template_names[0] : $template_names;
-
         if (isset($this->template_path_cache[$cache_key])) {
             $located = $this->template_path_cache[$cache_key];
         } else {
-            // No file found yet.
-            $located = false;
-
             $possible_paths = $this->enumerate_possible_files($template_names, $cache_key, $name);
-            foreach ($possible_paths as $file_name) {
-                if (file_exists($file_name)) {
-                    $this->template_path_cache[$cache_key] = $file_name;
-                    $located = $file_name;
-                    break;
-                }
+            $located = self::select_first_file($possible_paths);
+            if ($located) {
+                $this->template_path_cache[$cache_key] = $located;
             }
         }
         $located = $this->apply_filter(__FUNCTION__, $located, $name);
         $this->template_path_cache[$cache_key] = $located;
         return $located;
     }
-
-    protected function enumerate_possible_files(string|array $template_names, string $cache_key, $name)
+    public static function select_first_file(array $possible_paths)
+    {
+        foreach ($possible_paths as $file_name) {
+            if (file_exists($file_name)) {
+                return $file_name;
+            }
+        }
+        return false;
+    }
+    public function enumerate_possible_files(string|array $template_names, string $cache_key, $name)
     {
         // Remove empty entries.
         $template_names = array_filter((array) $template_names);
@@ -94,7 +94,7 @@ class PathResolver
         return $abs_paths;
     }
 
-    protected function get_possible_template_folders()
+    public function get_possible_template_folders()
     {
         $theme_directory = trailingslashit($this->theme_template_directory);
 

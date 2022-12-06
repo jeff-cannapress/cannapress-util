@@ -5,9 +5,10 @@ namespace CannaPress\Util\Tests;
 
 
 use PHPUnit\Framework\TestCase;
+use CannaPress\Util\Json\MetaInfo;
 use DateTimeImmutable;
 use JsonSerializable;
-use CannaPress\Util\Json\MetaInfo;
+
 
 final class JsonTest extends TestCase
 {
@@ -25,7 +26,6 @@ final class JsonTest extends TestCase
         $this->assertNotNull($result->licensed_to);
     }
 }
-
 
 #[\AllowDynamicProperties]
 class ChildClass implements JsonSerializable
@@ -45,8 +45,6 @@ class ChildClass implements JsonSerializable
         ];
     }
 }
-
-
 
 #[\AllowDynamicProperties]
 class ParentClass implements JsonSerializable
