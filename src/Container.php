@@ -73,9 +73,9 @@ class Container implements \Psr\Container\ContainerInterface
         $results = [];
         foreach ($this->services() as $s) {
             if (class_exists($s)) {
-                $key = $this->prefix.'svc_hooks_'.\CannaPress\Util\Hashes::fast( $s);
+                $key = $this->prefix . 'svc_hooks_' . \CannaPress\Util\Hashes::fast($s);
                 $service_hooks = \CannaPress\Util\TransientCache::get_transient($key);
-                if($service_hooks === false){
+                if ($service_hooks === false) {
                     $service_hooks = [];
                     $clazz = new ReflectionClass($s);
 
@@ -105,8 +105,8 @@ class Container implements \Psr\Container\ContainerInterface
                     }
                     \CannaPress\Util\TransientCache::set_transient($key, $service_hooks);
                 }
-                foreach($service_hooks as $hook_name => $metas){
-                    if(!isset($results[$hook_name])){
+                foreach ($service_hooks as $hook_name => $metas) {
+                    if (!isset($results[$hook_name])) {
                         $results[$hook_name] = [];
                     }
                     $results[$hook_name] = array_merge($results[$hook_name], $metas);
@@ -115,33 +115,50 @@ class Container implements \Psr\Container\ContainerInterface
         }
         return $results;
     }
+    public static function extract_service_constructor_args($service_impl)
+    {
+        $arg_types = [];
+        $clazz = new ReflectionClass($service_impl);
+        $constructor = $clazz->getConstructor();
+        if ($constructor !== null) {
+            foreach ($constructor->getParameters() as $p) {
+                $attrs = $p->getAttributes(DependsOn::class);
+                if (!empty($attrs)) {
+                    $arg_types[] = $attrs[0]->newInstance()->service_name;
+                } else {
+                    $arg_types[] = $p->getType()->getName();
+                }
+            }
+        }
+        return $arg_types;
+    }
 
     protected function create_provider(string $service_impl)
     {
-        $key = $this->prefix.'svc_args_'.\CannaPress\Util\Hashes::fast( $service_impl);
+        $key = $this->prefix . 'svc_args_' . \CannaPress\Util\Hashes::fast($service_impl);
         $arg_types = \CannaPress\Util\TransientCache::get_transient($key);
-        if($arg_types === false){
-            $arg_types = [];
-            $clazz = new ReflectionClass($service_impl);
-            $constructor = $clazz->getConstructor();
-            if ($constructor !== null) {
-                foreach ($constructor->getParameters() as $p) {
-                    $attrs = $p->getAttributes(DependsOn::class);
-                    if (!empty($attrs)) {
-                        $arg_types[] = $attrs[0]->newInstance()->service_name;
-                    } else {
-                        $arg_types[] = $p->getType()->getName();
-                    }
-                }
-            }
+        if ($arg_types === false) {
+            $arg_types = self::extract_service_constructor_args($service_impl);
             \CannaPress\Util\TransientCache::set_transient($key, $arg_types);
         }
-        return self::singleton(function ($ctx) use ($service_impl, $arg_types) {
-            $args = [];
-            foreach ($arg_types as $type) {
-                $args[] = $ctx->get($type);
+        return self::singleton(function ($ctx) use ($service_impl, $arg_types, $key) {
+            try {
+                $args = [];
+                foreach ($arg_types as $type) {
+                    $args[] = $ctx->get($type);
+                }
+                $instance = new $service_impl(...$args);
+                return $instance;
+            } catch (\TypeError $err) {
+                $arg_types = Container::extract_service_constructor_args($service_impl);
+                \CannaPress\Util\TransientCache::set_transient($key, $arg_types);
+                $args = [];
+                foreach ($arg_types as $type) {
+                    $args[] = $ctx->get($type);
+                }
+                $instance = new $service_impl(...$args);
+                return $instance;
             }
-            return new $service_impl(...$args);
         });
     }
     protected function services(): array
