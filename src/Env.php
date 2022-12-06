@@ -49,7 +49,7 @@ class Env implements ArrayAccess, Iterator
     private static function read_source_file($source_file)
     {
         if (file_exists($source_file)) {
-            $cache_key = 'cpscache:' . hash('xxh128', $source_file);
+            $cache_key = 'cpscache:' . \CannaPress\Util\Hashes::fast( $source_file);
             $stamp = filemtime($source_file);
             $cached_value = get_transient($cache_key);
             if ($cached_value === false || $cached_value->filemtime !== $stamp) {

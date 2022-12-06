@@ -12,7 +12,7 @@ class TransientCache
     }
     private function make_transient_key($key)
     {
-        return $this->prefix . hash('xxh128', $key);
+        return $this->prefix . \CannaPress\Util\Hashes::fast( $key);
     }
     public function child($prefix_part)
     {
