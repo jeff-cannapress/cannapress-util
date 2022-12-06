@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CannaPress\Util\Templates;
 
+use CannaPress\Util\Container;
+
 class DirectoryResolver
 {
     private array|null $resolved_paths = null;
@@ -27,7 +29,13 @@ class DirectoryResolver
     {
         return self::class . '/' . $name;
     }
-
+    public static function singleton($plugin_dir, $theme_overrides_folder, $which)
+    {
+        return Container::singleton(new DirectoryResolver(
+            TemplateManager::apply_filters('get_theme_overrides_folder', $theme_overrides_folder, $which),
+            trailingslashit($plugin_dir . $which)
+        ));
+    }
     public function get_possible_template_folders()
     {
         if (is_null($this->resolved_paths)) {

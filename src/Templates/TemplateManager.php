@@ -15,6 +15,21 @@ class TemplateManager
         protected PathResolver $path_resolver
     ) {
     }
+    public static function name(...$parts)
+    {
+        return self::class . '/' . implode('/', $parts);
+    }
+    public static function singleton($what, $which)
+    {
+        return Container::singleton(fn ($ctx) => new TemplateManager(
+            $ctx,
+            new PathResolver(
+                $ctx->get(DirectoryResolver::name($what))->child_resolver($which),
+                $ctx->get(FileResolver::class),
+                $ctx->get(TransientCache::class)->child($what . ':' . $which)
+            )
+        ));
+    }
 
     public static function apply_filters(string|array $function, ...$args): mixed
     {
