@@ -19,7 +19,7 @@ class DirectoryResolver
         $path = empty($this->relative_path) ? $path : trailingslashit($this->relative_path) . $path;
         return new DirectoryResolver($this->theme_template_directory, $this->plugin_template_directory, untrailingslashit($path));
     }
-    protected function apply_filter($name, $item, ...$rest)
+    protected function apply_filters($name, $item, ...$rest)
     {
         return TemplateManager::apply_filters($name, ...[$item, ...$rest]);
     }
@@ -50,7 +50,7 @@ class DirectoryResolver
             }
             // Sort the file paths based on priority.
             ksort($file_paths, SORT_NUMERIC);
-            $file_paths = $this->apply_filter(__FUNCTION__, $file_paths);
+            $file_paths = TemplateManager::apply_filters(__FUNCTION__, $file_paths);
             $this->resolved_paths = array_map('trailingslashit', $file_paths);
         }
         return $this->resolved_paths;

@@ -19,7 +19,7 @@ class PathResolver
         $this->files = $files ?? new FileResolver();
         $this->path_cache = $path_cache ?? new TransientCache(TemplateManager::filter_prefix);
     }
-    protected function apply_filter($name, $item, ...$rest)
+    protected function apply_filters($name, $item, ...$rest)
     {
         return TemplateManager::apply_filters($name, ...[$item, ...$rest]);
     }
@@ -30,7 +30,7 @@ class PathResolver
 
     public function get_absolute_filename(string $name, array $extensions = ['php', 'html']): string
     {
-        $file_name = $this->apply_filter('before_' . __FUNCTION__, null, $name, $extensions);
+        $file_name = TemplateManager::apply_filters('before_' . __FUNCTION__, null, $name, $extensions);
         if (empty($file_name)) {
             $cache_key = $name . '.' . (implode('|', $extensions));
             $file_name = $this->path_cache->get($cache_key);
@@ -42,7 +42,7 @@ class PathResolver
                 }
             }
         }
-        $file_name = $this->apply_filter(__FUNCTION__, $file_name, $name);
+        $file_name = TemplateManager::apply_filters(__FUNCTION__, $file_name, $name);
         if (false === $file_name) {
             return "";
         }
@@ -76,7 +76,7 @@ class PathResolver
                 $result[] = $dir . $file;
             }
         }
-        $result = $this->apply_filter(__FUNCTION__, $result, $name, $extensions);
+        $result = TemplateManager::apply_filters(__FUNCTION__, $result, $name, $extensions);
         return $result;
     }
 }

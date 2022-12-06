@@ -7,7 +7,7 @@ namespace CannaPress\Util\Templates;
 class FileResolver
 {
 
-    protected function apply_filter($name, $item, ...$rest)
+    protected function apply_filters($name, $item, ...$rest)
     {
         return TemplateManager::apply_filters($name, ...[$item, ...$rest]);
     }
@@ -25,11 +25,10 @@ class FileResolver
             foreach ($extensions as $ext) {
                 $templates[] = trailingslashit($name) . 'index.' . $ext;
             }
-        }
-        else{
+        } else {
             $templates[] = $name;
         }
 
-        return $this->apply_filter(__FUNCTION__, $templates, $name);
+        return TemplateManager::apply_filters(__FUNCTION__, $templates, $name, $extensions);
     }
 }
