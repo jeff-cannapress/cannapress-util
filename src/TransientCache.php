@@ -12,7 +12,7 @@ class TransientCache
     }
     private function make_transient_key($key)
     {
-        return $this->prefix . \CannaPress\Util\Hashes::fast( $key);
+        return $this->prefix . \CannaPress\Util\Hashes::fast($key);
     }
     public function child($prefix_part)
     {
@@ -49,17 +49,23 @@ class TransientCache
         }
         return $was_set;
     }
-
-    public static function get_transient(string $transient): mixed{
+    private static $in_proc_fallback = [];
+    public static function get_transient(string $transient): mixed
+    {
         if (function_exists('get_transient')) {
             return get_transient($transient);
         }
+        if (isset(self::$in_proc_fallback[$transient])) {
+            return self::$in_proc_fallback[$transient];
+        }
         return false;
     }
-    public static function set_transient(string $transient, mixed $value, int $expiration =0) : bool{
+    public static function set_transient(string $transient, mixed $value, int $expiration = 0): bool
+    {
         if (function_exists('set_transient')) {
             return set_transient($transient, $value, $expiration);
         }
+        self::$in_proc_fallback[$transient] = $value;
         return true;
     }
 }
