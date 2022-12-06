@@ -6,7 +6,6 @@ namespace CannaPress\Util\Templates;
 
 class DirectoryResolver
 {
-
     private array|null $resolved_paths = null;
     public function __construct(
         protected string $theme_template_directory,

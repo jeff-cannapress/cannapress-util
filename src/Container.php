@@ -73,7 +73,7 @@ class Container implements \Psr\Container\ContainerInterface
         $results = [];
         foreach ($this->services() as $s) {
             if (class_exists($s)) {
-                $key = $this->prefix.'svc_hooks_'.md5($s);
+                $key = $this->prefix.'svc_hooks_'.hash('xxh128', $s);
                 $service_hooks = get_transient($key);
                 if($service_hooks === false){
                     $service_hooks = [];
@@ -118,7 +118,7 @@ class Container implements \Psr\Container\ContainerInterface
 
     protected function create_provider(string $service_impl)
     {
-        $key = $this->prefix.'svc_args_'.md5($service_impl);
+        $key = $this->prefix.'svc_args_'.hash('xxh128', $service_impl);
         $arg_types = get_transient($key);
         if($arg_types === false){
             $arg_types = [];

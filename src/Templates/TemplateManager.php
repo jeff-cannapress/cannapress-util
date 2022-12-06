@@ -39,7 +39,7 @@ class TemplateManager
     {
         $container_identifier = $this->get_template_factory_identifier($name);
         if (!$this->container->has($container_identifier)) {
-            $file_name = $this->path_resolver->get_template_absolute_filename($name);
+            $file_name = $this->path_resolver->get_absolute_filename($name);
             if (!empty($file_name)) {
                 $this->container->add($container_identifier, Container::singleton($this->make_template_instance_factory($file_name, $container_identifier)));
             }

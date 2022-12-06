@@ -23,7 +23,7 @@ class PathResolver
     {
         return TemplateManager::apply_filters($name, ...[$item, ...$rest]);
     }
-    public function child_resolver(string $path)
+    public function child(string $path)
     {
         return new PathResolver($this->dirs->child_resolver($path), $this->files, $this->path_cache);
     }
@@ -66,7 +66,7 @@ class PathResolver
         return false;
     }
 
-    public function get_all_possible_paths(string $name, array $extensions = ['php', 'html'])
+    public function get_all_possible_paths(string $name, array $extensions )
     {
         $file_names = $this->files->get_possible_file_names($name, $extensions);
         $directories = $this->dirs->get_possible_template_folders();

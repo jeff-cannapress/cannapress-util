@@ -18,11 +18,16 @@ class FileResolver
         $templates = [];
         //make sure none of the extensions start with a dot
         $extensions = array_map(fn ($x) => str_starts_with($x, '.') ? substr($x, 1) : $x, $extensions);
-        foreach ($extensions as $ext) {
-            $templates[] = $name . '.' . $ext;
+        if (!empty($extensions)) {
+            foreach ($extensions as $ext) {
+                $templates[] = $name . '.' . $ext;
+            }
+            foreach ($extensions as $ext) {
+                $templates[] = trailingslashit($name) . 'index.' . $ext;
+            }
         }
-        foreach ($extensions as $ext) {
-            $templates[] = trailingslashit($name) . 'index.' . $ext;
+        else{
+            $templates[] = $name;
         }
 
         return $this->apply_filter(__FUNCTION__, $templates, $name);
