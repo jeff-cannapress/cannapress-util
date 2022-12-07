@@ -19,7 +19,9 @@ class TemplateManager
     {
         return self::class . '/' . implode('/', $parts);
     }
-
+    public static function singleton(string $which, $what = 'templates'){
+        return Container::singleton(fn(Container $ctx)=> new TemplateManager($ctx, $ctx->get(PathResolver::name($what))->child($which)));
+    }
 
     protected function make_template_instance_factory($file_name, $container_identifier)
     {
