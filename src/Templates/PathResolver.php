@@ -35,7 +35,7 @@ class PathResolver
     {
         return new PathResolver($this->dirs->child_resolver($path), $this->files, $this->path_cache);
     }
-    public function get_absolute_filename(string $name, array $extensions = ['php', 'html']): string
+    public function get_absolute_filename(string $name, array $extensions = ['php', 'html']): string|null
     {
 
         $file_name = TemplateManagerHooks::before_get_absolute_filename(null, $name, $extensions);
