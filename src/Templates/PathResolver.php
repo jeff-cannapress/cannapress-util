@@ -42,7 +42,7 @@ class PathResolver
         if (empty($file_name)) {
             $cache_key = $name . '.' . (implode('|', $extensions));
             $file_name = $this->path_cache->get($cache_key);
-            if ($file_name === false) {
+            if (is_null($file_name)) {
                 $possible_paths = $this->get_possible_template_paths($name, $extensions);
                 $file_name = self::find_first_existing_file($possible_paths);
                 if (!empty($file_name)) {
