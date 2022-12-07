@@ -31,7 +31,7 @@ final class PathResolutionTest extends TestCase
         $dirs = (new DirectoryResolver('cannapress',  'templates'))->child_resolver('public');
         self::$template_directory = 'parent_theme_dir';
         self::$stylesheet_directory = 'child_theme_dir';
-        $actual = $dirs->get_possible_template_folders();
+        $actual = $dirs->get_possible_template_directories();
         $expected = [
             1 => 'child_theme_dir/cannapress/public/',
             10 => 'parent_theme_dir/cannapress/public/',
@@ -51,7 +51,7 @@ final class PathResolutionTest extends TestCase
         $dirs = new DirectoryResolver('cannapress',  'templates');
         self::$template_directory = 'parent_theme_dir';
         self::$stylesheet_directory = 'child_theme_dir';
-        $actual = $dirs->get_possible_template_folders();
+        $actual = $dirs->get_possible_template_directories();
         $expected = [
             1 => 'child_theme_dir/cannapress/',
             10 => 'parent_theme_dir/cannapress/',
@@ -70,7 +70,7 @@ final class PathResolutionTest extends TestCase
         $dirs = new DirectoryResolver('cannapress',  'templates');
         self::$template_directory = 'parent_theme_dir';
         self::$stylesheet_directory = 'parent_theme_dir';
-        $actual = $dirs->get_possible_template_folders();
+        $actual = $dirs->get_possible_template_directories();
         $expected = [
             10 => 'parent_theme_dir/cannapress/',
             15 => 'parent_theme_dir/',
@@ -90,7 +90,7 @@ final class PathResolutionTest extends TestCase
         self::$template_directory = 'parent_theme_dir';
         self::$stylesheet_directory = 'child_theme_dir';
         $resolver = new PathResolver(new DirectoryResolver('cannapress', 'templates'));
-        $actual = $resolver->get_all_possible_paths('expected', ['php', 'html']);
+        $actual = $resolver->get_possible_template_paths('expected', ['php', 'html']);
         $expected = [
             'child_theme_dir/cannapress/expected.php',
             'child_theme_dir/cannapress/expected.html',

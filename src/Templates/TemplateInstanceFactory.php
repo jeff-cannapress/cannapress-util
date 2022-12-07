@@ -21,7 +21,8 @@ class TemplateInstanceFactory
             }
             $instance_props = $new_instance_props;
         }
-        $instance_props = TemplateManager::apply_filters([$this->filters_identifier, __FUNCTION__], $instance_props, $this);
+
+        $instance_props = TemplateManagerHooks::get_instance_props($instance_props, $this->filters_identifier, $this->file_name, $this);
         return $instance_props;
     }
     public function create($instance_props = [])
@@ -40,7 +41,8 @@ class TemplateInstanceFactory
             }
             public function emit()
             {
-                $should_do_emit = TemplateManager::apply_filters([$this->filters_d3176d960d2749458b58b24f2813d7f2, ('before_' . (__FUNCTION__))], true, $this->abs_path_d3176d960d2749458b58b24f2813d7f2);
+                $should_do_emit = TemplateManagerHooks::should_do_emit(true, $this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
+                
                 if ($should_do_emit) {
                     $html = $this->render();
                     echo($html);
@@ -48,15 +50,18 @@ class TemplateInstanceFactory
             }
             public function render()
             {
+                $html = TemplateManagerHooks::before_template_instance_rendered("", $this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 $html = $this->render_raw();
                 $html = do_blocks($html);
-                $html = TemplateManager::apply_filters([$this->filters_d3176d960d2749458b58b24f2813d7f2, __FUNCTION__], $html, $this->abs_path_d3176d960d2749458b58b24f2813d7f2);
+                $html = TemplateManagerHooks::template_instance_rendered($html, $this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 return $html;
             }
             private function render_raw()
             {
                 ob_start();
+                TemplateManagerHooks::before_template_file_included($this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 include($this->abs_path_d3176d960d2749458b58b24f2813d7f2);
+                TemplateManagerHooks::after_template_file_included($this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 $result_d3176d960d2749458b58b24f2813d7f2 = ob_get_contents();
                 ob_end_clean();
                 return $result_d3176d960d2749458b58b24f2813d7f2;

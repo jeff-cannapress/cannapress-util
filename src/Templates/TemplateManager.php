@@ -19,31 +19,21 @@ class TemplateManager
     {
         return self::class . '/' . implode('/', $parts);
     }
-    public static function singleton($what, $which)
+    public static function singleton($what, ...$which)
     {
-        return Container::singleton(fn ($ctx) => new TemplateManager(
-            $ctx,
-            new PathResolver(
-                $ctx->get(DirectoryResolver::name($what))->child_resolver($which),
-                $ctx->get(FileResolver::class),
-                $ctx->get(TransientCache::class)->child($what . ':' . $which)
-            )
-        ));
+        return Container::singleton(function (Container $ctx) use ($what, $which) {
+            $dir = $ctx->get(DirectoryResolver::name($what));
+            $cache = $ctx->get(TransientCache::class)->child(implode(':', ...[$what, ...$which]));
+            $file = $ctx->get(FileResolver::class);
+            foreach ($which as $part) {
+                $dir = $dir->child_resolver($part);
+            }
+            return new PathResolver($dir, $file, $cache);
+        });
     }
 
-    public static function apply_filters(string|array $function, ...$args): mixed
-    {
-        if (is_string($function)) {
-            $function = [$function];
-        }
-        $filter_name = implode('__', [TemplateManager::filter_prefix, ...$function]);
-        return apply_filters($filter_name, ...$args);
-    }
-    protected function get_template_factory_identifier($name): string
-    {
-        $container_identifier = $this->path_resolver->get_template_identifier($name);
-        return self::apply_filters(__FUNCTION__, $container_identifier, $name);
-    }
+
+
     protected function make_template_instance_factory($file_name, $container_identifier)
     {
         $result = new TemplateInstanceFactory($file_name, $container_identifier);
@@ -52,7 +42,7 @@ class TemplateManager
     }
     protected function get_template_part_instance_factory($name)
     {
-        $container_identifier = $this->get_template_factory_identifier($name);
+        $container_identifier = $this->path_resolver->get_template_identifier($name);
         if (!$this->container->has($container_identifier)) {
             $file_name = $this->path_resolver->get_absolute_filename($name);
             if (!empty($file_name)) {

@@ -19,30 +19,27 @@ class PathResolver
         $this->files = $files ?? new FileResolver();
         $this->path_cache = $path_cache ?? new TransientCache(TemplateManager::filter_prefix);
     }
-    protected function apply_filters($name, $item, ...$rest)
-    {
-        return TemplateManager::apply_filters($name, ...[$item, ...$rest]);
-    }
     public function child(string $path)
     {
         return new PathResolver($this->dirs->child_resolver($path), $this->files, $this->path_cache);
     }
-
     public function get_absolute_filename(string $name, array $extensions = ['php', 'html']): string
     {
-        $file_name = TemplateManager::apply_filters('before_' . __FUNCTION__, null, $name, $extensions);
+
+        $file_name = TemplateManagerHooks::before_get_absolute_filename(null, $name, $extensions);
         if (empty($file_name)) {
             $cache_key = $name . '.' . (implode('|', $extensions));
             $file_name = $this->path_cache->get($cache_key);
             if ($file_name === false) {
-                $possible_paths = $this->get_all_possible_paths($name, $extensions);
+                $possible_paths = $this->get_possible_template_paths($name, $extensions);
                 $file_name = self::find_first_existing_file($possible_paths);
                 if (!empty($file_name)) {
                     $this->path_cache->set($cache_key, $file_name, 60 * 5/* 5min */);
                 }
             }
         }
-        $file_name = TemplateManager::apply_filters(__FUNCTION__, $file_name, $name);
+        $file_name = TemplateManagerHooks::get_absolute_filename($file_name, $name, $extensions);
+
         if (false === $file_name) {
             return "";
         }
@@ -50,7 +47,8 @@ class PathResolver
     }
     public function get_template_identifier(string $name): string
     {
-        return $this->dirs->get_template_identifier($name);
+        $identifier =  $this->dirs->get_template_identifier($name);
+        return TemplateManagerHooks::get_template_factory_identifier($identifier, $name);
     }
     public static function name(string $name)
     {
@@ -66,17 +64,21 @@ class PathResolver
         return false;
     }
 
-    public function get_all_possible_paths(string $name, array $extensions )
+    public function get_possible_template_paths(string $name, array $extensions)
     {
+        $all_paths = TemplateManagerHooks::before_get_possible_template_paths([], $name, $extensions);
+        if (!empty($all_paths)) {
+            return $all_paths;
+        }
         $file_names = $this->files->get_possible_file_names($name, $extensions);
-        $directories = $this->dirs->get_possible_template_folders();
-        $result = [];
+        $directories = $this->dirs->get_possible_template_directories();
+
         foreach ($directories as $dir) {
             foreach ($file_names as $file) {
-                $result[] = $dir . $file;
+                $all_paths[] = $dir . $file;
             }
         }
-        $result = TemplateManager::apply_filters(__FUNCTION__, $result, $name, $extensions);
-        return $result;
+        $all_paths = TemplateManagerHooks::get_possible_template_paths($all_paths, $name, $extensions);
+        return $all_paths;
     }
 }

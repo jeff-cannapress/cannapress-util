@@ -7,28 +7,26 @@ namespace CannaPress\Util\Templates;
 class FileResolver
 {
 
-    protected function apply_filters($name, $item, ...$rest)
+    public function get_possible_file_names(string $part_name, array $extensions)
     {
-        return TemplateManager::apply_filters($name, ...[$item, ...$rest]);
-    }
+        $part_name = untrailingslashit($part_name);
 
-    public function get_possible_file_names($name, array $extensions)
-    {
-        $name = untrailingslashit($name);
-        $templates = [];
+        $possible_file_names = TemplateManagerHooks::before_get_possible_file_names([], $part_name, $extensions);
+        if (!empty($possible_file_names)) {
+            return $possible_file_names;
+        }
         //make sure none of the extensions start with a dot
         $extensions = array_map(fn ($x) => str_starts_with($x, '.') ? substr($x, 1) : $x, $extensions);
         if (!empty($extensions)) {
             foreach ($extensions as $ext) {
-                $templates[] = $name . '.' . $ext;
+                $possible_file_names[] = $part_name . '.' . $ext;
             }
             foreach ($extensions as $ext) {
-                $templates[] = trailingslashit($name) . 'index.' . $ext;
+                $possible_file_names[] = trailingslashit($part_name) . 'index.' . $ext;
             }
         } else {
-            $templates[] = $name;
+            $possible_file_names[] = $part_name;
         }
-
-        return TemplateManager::apply_filters(__FUNCTION__, $templates, $name, $extensions);
+        return TemplateManagerHooks::get_possible_file_names($possible_file_names, $part_name, $extensions);
     }
 }
