@@ -34,7 +34,7 @@ class TemplateManagerHooks
      * @param string $part_name the name of the requested template part
      * @param array $extensions the list of valid file extensions for this part in priority order
      */
-    public static function get_absolute_filename(string|null|false $file_name, string $part_name, array $extensions): string
+    public static function get_absolute_filename(string|null|false $file_name, string $part_name, array $extensions): string|null|false
     {
         return self::apply(__FUNCTION__, $file_name, $part_name, $extensions);
     }
@@ -44,7 +44,7 @@ class TemplateManagerHooks
      * @param string $part_name the name of the requested template part
      * @param array $extensions the list of valid file extensions for this part in priority order
      */
-    public static function before_get_absolute_filename(string|null|false $file_name, string $part_name, array $extensions): string
+    public static function before_get_absolute_filename(string|null|false $file_name, string $part_name, array $extensions): string|null|false
     {
         return self::apply(__FUNCTION__, $file_name, $part_name, $extensions);
     }
