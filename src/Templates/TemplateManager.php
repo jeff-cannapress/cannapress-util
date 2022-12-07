@@ -19,15 +19,19 @@ class TemplateManager
     {
         return self::class . '/' . implode('/', $parts);
     }
-    public static function singleton(string $which, $what = 'templates'){
-        return Container::singleton(fn(Container $ctx)=> new TemplateManager($ctx, $ctx->get(PathResolver::name($what))->child($which)));
+    public static function singleton(string $which, $what = 'templates')
+    {
+        return Container::singleton(fn (Container $ctx) => new TemplateManager($ctx, $ctx->get(PathResolver::name($what))->child($which)));
     }
 
     protected function make_template_instance_factory($file_name, $container_identifier)
     {
-        $result = new TemplateInstanceFactory($file_name, $container_identifier);
-        $result = self::apply_filters(__FUNCTION__, $result, $file_name, $container_identifier);
-        return $result;
+        $factory = TemplateManagerHooks::before_make_template_instance_factory(null, $file_name, $container_identifier);
+        if (is_null($factory)) {
+            $factory = new TemplateInstanceFactory($file_name, $container_identifier);
+            $factory = TemplateManagerHooks::make_template_instance_factory($factory, $container_identifier, $file_name);
+        }
+        return $factory;
     }
     protected function get_template_part_instance_factory($name)
     {

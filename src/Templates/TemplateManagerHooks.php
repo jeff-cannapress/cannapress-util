@@ -131,6 +131,29 @@ class TemplateManagerHooks
     {
         return self::apply(__FUNCTION__, $instance_props, $identifier, $file_name, $factory);
     }
+
+    /**
+     * bypass Filter the instance properties for a template about to be instantiated -- return non-null to bypass factory instantiation
+     * @param TemplateInstanceFactory $factory
+     * @param string $identifier
+     * @param string $file_name    
+     */
+    public static function before_make_template_instance_factory(TemplateInstanceFactory|null $factory, string $identifier, string $file_name): TemplateInstanceFactory|null
+    {
+        return self::apply(__FUNCTION__, $factory, $identifier, $file_name);
+    }
+
+    /**
+     * Filter the instance properties for a template about to be instantiated
+     * @param TemplateInstanceFactory $factory
+     * @param string $identifier
+     * @param string $file_name    
+     */
+    public static function make_template_instance_factory(TemplateInstanceFactory|null $factory, string $identifier, string $file_name): TemplateInstanceFactory|null
+    {
+        return self::apply(__FUNCTION__, $factory, $identifier, $file_name);
+    }
+
     /**
      * Bypass filter / action for when a template is about to be rendered out to the buffer.
      * @param bool $should_emit -- always true
