@@ -175,7 +175,7 @@ class TemplateManagerHooks
      */
     public static function before_template_file_included(string $identifier, string $file_name, object $template): void
     {
-        return self::do(__FUNCTION__, $identifier, $file_name, $template);
+        self::do(__FUNCTION__, $identifier, $file_name, $template);
     }
     /**
      * action to fire after the template file is included but before the buffer is closed
@@ -185,6 +185,6 @@ class TemplateManagerHooks
      */
     public static function after_template_file_included(string $identifier, string $file_name, object $template): void
     {
-        return self::do(__FUNCTION__, $identifier, $file_name, $template);
+        self::do(__FUNCTION__, $identifier, $file_name, $template);
     }
 }
