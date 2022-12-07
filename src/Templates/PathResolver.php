@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace CannaPress\Util\Templates;
 
 use CannaPress\Util\TransientCache;
-
+use CannaPress\Util\Container;
 class PathResolver
 {
 
@@ -19,6 +19,18 @@ class PathResolver
         $this->files = $files ?? new FileResolver();
         $this->path_cache = $path_cache ?? new TransientCache(TemplateManager::filter_prefix);
     }
+    public static function singleton($what, ...$which)
+    {
+        return Container::singleton(function (Container $ctx) use ($what, $which) {
+            $dir = $ctx->get(DirectoryResolver::name($what));
+            $cache = $ctx->get(TransientCache::class)->child(implode(':', ...[$what, ...$which]));
+            $file = $ctx->get(FileResolver::class);
+            foreach ($which as $part) {
+                $dir = $dir->child_resolver($part);
+            }
+            return new PathResolver($dir, $file, $cache);
+        });
+    }    
     public function child(string $path)
     {
         return new PathResolver($this->dirs->child_resolver($path), $this->files, $this->path_cache);

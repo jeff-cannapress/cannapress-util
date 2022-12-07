@@ -19,19 +19,6 @@ class TemplateManager
     {
         return self::class . '/' . implode('/', $parts);
     }
-    public static function singleton($what, ...$which)
-    {
-        return Container::singleton(function (Container $ctx) use ($what, $which) {
-            $dir = $ctx->get(DirectoryResolver::name($what));
-            $cache = $ctx->get(TransientCache::class)->child(implode(':', ...[$what, ...$which]));
-            $file = $ctx->get(FileResolver::class);
-            foreach ($which as $part) {
-                $dir = $dir->child_resolver($part);
-            }
-            return new PathResolver($dir, $file, $cache);
-        });
-    }
-
 
 
     protected function make_template_instance_factory($file_name, $container_identifier)
