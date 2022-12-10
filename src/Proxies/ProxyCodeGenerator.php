@@ -97,6 +97,7 @@ class ProxyCodeGenerator
     {
         $params = $method->getParameters();
         $return_type = $this->get_type_declaration($method->getReturnType());
+        $return_parts = empty($return_type)? ['mixed'] : explode('|', $return_type);
 
         $result = [];
         $access = $method->isPublic() ? 'public' : 'protected';
@@ -115,7 +116,8 @@ class ProxyCodeGenerator
         $result[] = '    $invocation = new \\CannaPress\\Util\\Proxies\\Invocation( ';
         $result[] = '        ' . ($this->hasTarget ? '$this->wrapped_instance' : 'null') . ',';
         $result[] = '        \'' . addslashes($method->getName()) . '\',';
-        $result[] = '        [' . implode(', ', array_map(fn ($x) => '$' . $x->getName(), $params)) . ' ]';
+        $result[] = '        [' . implode(', ', array_map(fn ($x) => '$' . $x->getName(), $params)) . ' ],';
+        $result[] = '        [' . implode(', ', array_map(fn ($x) => "'$x'", $return_parts)) . ' ],';
         $result[] = '    );';
         if ($this->hasTarget) {
             $result[] = '    if($this->interceptor->supports($invocation))';

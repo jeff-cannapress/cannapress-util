@@ -4,8 +4,7 @@
 
 namespace CannaPress\Util\Tests;
 
-
-
+use CannaPress\Util\Hashes;
 use PHPUnit\Framework\TestCase;
 use CannaPress\Util\Json\MetaInfo;
 use CannaPress\Util\Proxies\Interceptor;
@@ -33,10 +32,10 @@ final class JsonTest extends TestCase
     }
     public function testCanGen(): void
     {
-        $dir = '/tmp/cannapress-util-proxy/test_' . UUID::create();
+        $dir = '/tmp/cannapress-util-proxy/test_' . Hashes::uuid();
 
         $pg = new ProxyFactory($dir);
-        $proxyInstance = $pg->create(new ToProxy("", 120, new ChildClass([
+        $proxyInstance = $pg->create(ToProxy::class, new ToProxy("", 120, new ChildClass([
             'given_name' => 'Larry',
             'family_name' => "Parallelogram",
             'email' => 'larry.parallelogram@demo-cannabis-company.com',
@@ -48,11 +47,13 @@ final class JsonTest extends TestCase
         $value = $proxyInstance->bar();
         $this->assertEquals('Hello, World', $value);
     }
-    public function testCanGenInterface():void{
-        $dir = '/tmp/cannapress-util-proxy/test_' . UUID::create();
+    public function testCanGenInterface(): void
+    {
+        $dir = '/tmp/cannapress-util-proxy/test_' . Hashes::uuid();
         $pg = new ProxyFactory($dir);
         /**@var LoggerInterface */
-        $proxyInstance = $pg->create(LoggerInterface::class, new class implements Interceptor{
+        $proxyInstance = $pg->create(LoggerInterface::class, null, new class implements Interceptor
+        {
             public function supports(Invocation $invocation): bool
             {
                 return true;
@@ -62,9 +63,7 @@ final class JsonTest extends TestCase
                 var_dump($invocation);
             }
         });
-        $proxyInstance->log(123, "abcd", ['a'=>123]);
-
-
+        $proxyInstance->log(123, "abcd", ['a' => 123]);
     }
 }
 
