@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+//declare(strict_types=1);
 
 namespace CannaPress\Util\Proxies;
 
@@ -32,7 +32,7 @@ class ProxyCodeGenerator
     {
         $result = [];
         $result[] = '<?php';
-        $result[] = 'declare(strict_types=1);';
+        $result[] = '//declare(strict_types=1);';
         $result[] = 'namespace ' . $this->output_namespace . ';';
         $extension = $this->class->isInterface() ? 'implements' : 'extends';
         $result[] =  'final class ' . ($this->proxy_name) . ' ' . $extension . ' \\' . ($this->class->getName());
@@ -126,15 +126,16 @@ class ProxyCodeGenerator
             $result[] = '    {';
         }
         $result[] = '        $this->interceptor->invoke($invocation);';
-        if ($return_type !== 'void') {
-            $result[] = '        return $invocation->result;';
-        }
+
         if ($this->hasTarget) {
             $result[] = '    }';
             $result[] = '    else';
             $result[] = '    {';
-            $result[] = '        ' . ($return_type === 'void' ? '' : 'return ') . ('$this->wrapped_instance->' . ($method->getName()) . '(' . implode(', ', array_map(fn ($x) => '$' . $x->getName(), $params)) . ');') . ';';
+            $result[] = '        $invocation->proceed();';
             $result[] = '    }';
+        }
+        if ($return_type !== 'void') {
+            $result[] = '        return $invocation->result;';
         }
         $result[] = '}';
         return $result;
