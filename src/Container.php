@@ -14,44 +14,62 @@ use ReflectionClass;
 
 class Container implements \Psr\Container\ContainerInterface
 {
-    public function __construct(private string $plugin_root_dir, private $prefix, private array $providers)
+    protected array $providers;
+    public function __construct(protected string $plugin_root_dir, private $prefix,  array $providers)
     {
-        if (!isset($this->providers[Env::class])) {
-            $this->providers[Env::class] = Container::singleton(fn ($ctx) => Env::create(trailingslashit($plugin_root_dir) . '.env'));
+        $providers = self::ensure_providers_is_map($providers);
+        if (!isset($providers[Env::class])) {
+            $providers[Env::class] = self::default_env($plugin_root_dir);
         }
-        if (!isset($this->providers[\Psr\Log\LoggerInterface::class])) {
-            $this->providers[\Psr\Log\LoggerInterface::class] = Container::singleton(function ($ctx) use ($plugin_root_dir, $prefix) {
-                $env = $ctx->get(Env::class)->create_child('CANNAPRESS');
-
-                if ($env->ENVIRONMENT === 'DEVELOPMENT') {
-                    $level = Logger::toMonologLevel(strtolower($env->LOG_LEVEL ?? LogLevel::DEBUG));
-                    $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir) . 'logs/' . $prefix . '.log';
-                    $logger = new Logger($prefix);
-                    $handler = new StreamHandler($path, $level);
-                    $handler->setFormatter(new JsonFormatter());
-                    $logger->pushHandler($handler);
-                    return $logger;
-                }
-                return new NullLogger();
-            });
+        if (!isset($providers[\Psr\Log\LoggerInterface::class])) {
+            $providers[\Psr\Log\LoggerInterface::class] = self::default_logger($plugin_root_dir, $plugin_root_dir);
         }
 
-        $numeric =  array_values(array_filter(array_keys($this->providers), fn ($k) => is_int($k)));
-        foreach ($numeric as $n) {
-            $key = $this->providers[$n];
-            unset($this->providers[$n]);
-            $this->providers[$key] = $key;
-        }
-        $keys = array_keys($this->providers);
+
+        $keys = array_keys($providers);
         foreach ($keys as $service) {
-            if (is_string($this->providers[$service]) && class_exists($this->providers[$service])) {
-                $this->providers[$service] = self::create_provider($this->providers[$service]);
+            if (is_string($providers[$service]) && class_exists($providers[$service])) {
+                $providers[$service] = self::create_provider($providers[$service]);
             }
-            if (!is_callable($this->providers[$service])) {
-                $this->providers[$service] = self::singleton($this->providers[$service]);
+            if (!is_callable($providers[$service])) {
+                $providers[$service] = self::singleton($providers[$service]);
             }
         }
+        $this->providers = $providers;
         do_action($prefix . '_container_initialized', $this);
+    }
+    public static function ensure_providers_is_map($providers)
+    {
+        $result = [];
+        foreach (array_keys($providers) as $key) {
+            if (is_int($key)) {
+                $result[$providers[$key]] = $providers[$key];
+            } else {
+                $result[$key] = $providers[$key];
+            }
+        }
+        return $result;
+    }
+    public static function default_env(string $plugin_root_dir)
+    {
+        return Container::singleton(fn ($ctx) => Env::create(trailingslashit($plugin_root_dir) . '.env'));
+    }
+    public static function default_logger(string $plugin_root_dir, $prefix)
+    {
+        return self::singleton(function ($ctx) use ($plugin_root_dir, $prefix) {
+            $env = $ctx->get(Env::class)->create_child('CANNAPRESS');
+
+            if ($env->ENVIRONMENT === 'DEVELOPMENT') {
+                $level = Logger::toMonologLevel(strtolower($env->LOG_LEVEL ?? LogLevel::DEBUG));
+                $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir) . 'logs/' . $prefix . '.log';
+                $logger = new Logger($prefix);
+                $handler = new StreamHandler($path, $level);
+                $handler->setFormatter(new JsonFormatter());
+                $logger->pushHandler($handler);
+                return $logger;
+            }
+            return new NullLogger();
+        });
     }
 
     protected function register_container_hooks()
@@ -169,11 +187,16 @@ class Container implements \Psr\Container\ContainerInterface
     {
         return array_key_exists($identifier, $this->providers) && !is_null($this->providers[$identifier]);
     }
+    protected function get_provider($id)
+    {
+        return $this->providers[$id];
+    }
     public function get(string $id): mixed
     {
         $result = null;
         if ($this->has($id)) {
-            $result = ($this->providers[$id])($this);
+            $provider = $this->get_provider($id);
+            $result = ($provider)($this);
         }
         $result = apply_filters($this->prefix . '_container_make', $result, $id, $this);
         return $result;
