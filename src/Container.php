@@ -57,18 +57,13 @@ class Container implements \Psr\Container\ContainerInterface
     public static function default_logger(string $plugin_root_dir, $prefix)
     {
         return self::singleton(function ($ctx) use ($plugin_root_dir, $prefix) {
-            $env = $ctx->get(Env::class)->create_child('CANNAPRESS');
-
-            if ($env->ENVIRONMENT === 'DEVELOPMENT') {
-                $level = Logger::toMonologLevel(strtolower($env->LOG_LEVEL ?? LogLevel::DEBUG));
-                $path = $env->LOG_PATH  ?? trailingslashit($plugin_root_dir) . 'logs/' . $prefix . '.log';
-                $logger = new Logger($prefix);
-                $handler = new StreamHandler($path, $level);
-                $handler->setFormatter(new JsonFormatter());
-                $logger->pushHandler($handler);
-                return $logger;
-            }
-            return new NullLogger();
+            $level = Logger::toMonologLevel(strtolower(LogLevel::DEBUG));
+            $path =  trailingslashit($plugin_root_dir) . 'logs/' . $prefix . '.log';
+            $logger = new Logger($prefix);
+            $handler = new StreamHandler($path, $level);
+            $handler->setFormatter(new JsonFormatter());
+            $logger->pushHandler($handler);
+            return $logger;
         });
     }
 

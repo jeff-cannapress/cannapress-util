@@ -65,6 +65,7 @@ final class JsonTest extends TestCase
         });
         $proxyInstance->log(123, "abcd", ['a' => 123]);
     }
+    
 }
 
 class LoggingInterceptor implements Interceptor
