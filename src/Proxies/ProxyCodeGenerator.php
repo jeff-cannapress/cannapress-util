@@ -17,23 +17,19 @@ class ProxyCodeGenerator
 {
     private ReflectionClass $class;
     private array $methods;
-    public string $proxy_name;
-    public string $proxy_full_name;
-    public string $output_namespace;
-    public function __construct(string $class, private bool $hasTarget)
+
+    public function __construct(string $class, public string $proxy_name, private bool $hasTarget)
     {
         $this->class = new ReflectionClass($class);
-        $this->methods = array_filter($this->class->getMethods(), fn (ReflectionMethod $m) => (($m->isPublic() || $m->isProtected()) && !$m->isFinal() && !$m->isConstructor()));
-        $this->proxy_name = 'P' . ($this->hasTarget ? 'T' : 'U') . (UUID::create());
-        $this->output_namespace = 'NS' . (UUID::create());
-        $this->proxy_full_name = '\\' . $this->output_namespace . '\\' . $this->proxy_name;
+        $this->methods = array_filter($this->class->getMethods(), fn (ReflectionMethod $m) => (($m->isPublic() || $m->isProtected()) && !$m->isFinal() && !$m->isConstructor()&& !$m->isStatic()));
+      
     }
     public function generate(): string
     {
         $result = [];
         $result[] = '<?php';
         $result[] = '//declare(strict_types=1);';
-        $result[] = 'namespace ' . $this->output_namespace . ';';
+
         $extension = $this->class->isInterface() ? 'implements' : 'extends';
         $result[] =  'final class ' . ($this->proxy_name) . ' ' . $extension . ' \\' . ($this->class->getName());
         $result[] = '{';
@@ -58,7 +54,7 @@ class ProxyCodeGenerator
         }
         $name .= $type->getName();
         if ($name !== 'null') {
-            if ($type->allowsNull()) {
+            if ($type->allowsNull() && $name !== 'mixed') {
                 $name = '?' . $name;
             }
         }

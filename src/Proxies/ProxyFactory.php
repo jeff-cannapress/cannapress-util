@@ -4,63 +4,46 @@
 
 namespace CannaPress\Util\Proxies;
 
+use CannaPress\Util\Hashes;
+
 class ProxyFactory
 {
     public static $CACHE_DIRECTORY_PERMISSIONS = 0755;
     public static $CACHE_FILE_PERMISSIONS = 0644;
 
     private array $generated_proxies = [];
-    private string $index_file;
+
     public function __construct(protected string $cache_dir)
-    {
-        $this->index_file = $this->cache_dir . '/proxies_list.json';
-        $this->update_index_file();
-    }
-    private function update_index_file()
     {
         if (!is_dir($this->cache_dir)) {
             $old = umask(0);
             mkdir($this->cache_dir, self::$CACHE_DIRECTORY_PERMISSIONS, true);
             umask($old);
         }
-
-        if (file_exists($this->index_file)) {
-            $json = file_get_contents($this->index_file);
-            $this->generated_proxies = json_decode($json, true);
-        }
-    }
-    private function flush_index_file()
-    {
-        file_put_contents($this->index_file, json_encode($this->generated_proxies));
     }
 
-    public function create(object|string $target, Interceptor $interceptor)
+
+    public function create(string $exposed_class, object|null $target_instance, Interceptor $interceptor)
     {
-        $target_class = is_string($target) ? $target : get_class($target);
-        $target_type = is_object($target) ? 'T' : 'U';
-        if (!isset($this->generated_proxies[$target_class]) || !isset($this->generated_proxies[$target_class][$target_type])) {
-            $this->update_index_file();
-            if (!isset($this->generated_proxies[$target_class]) || !isset($this->generated_proxies[$target_class][$target_type])) {
-                $pg = new ProxyCodeGenerator($target_class, $target_type === 'T');
+        
+        $target_kind = !is_null($target_instance) ? 'T' : 'U';
+        $target_instance_name = $target_kind === 'T'? get_class($target_instance) : ('INTERFACE_PROXY'.$exposed_class);
+
+        $proxy_name = 'DynamicProxy'.(Hashes::fast(implode(',',[$exposed_class, $target_instance_name, $target_kind])));
+        $generated_code_file = $this->cache_dir . '/' . $proxy_name . '.php';
+        
+
+        if (!class_exists($proxy_name)) {
+            if(!file_exists(!$generated_code_file)){
+                $pg = new ProxyCodeGenerator($exposed_class, $proxy_name, $target_kind === 'T');
                 $php = $pg->generate();
-                $filename = $this->cache_dir . '/' . $pg->proxy_name . '.php';
-                file_put_contents($filename, $php);
-                chmod($filename, self::$CACHE_FILE_PERMISSIONS);
-                $this->update_index_file();
-                if (!isset($this->generated_proxies[$target_class])) {
-                    $this->generated_proxies[$target_class] = [];
-                }
-                $this->generated_proxies[$target_class][$target_type] = $pg->proxy_full_name;
-                $this->flush_index_file();
+                file_put_contents($generated_code_file, $php);
+                chmod($generated_code_file, self::$CACHE_FILE_PERMISSIONS);
             }
+            require_once($generated_code_file);   
         }
-        if (isset($this->generated_proxies[$target_class]) && isset($this->generated_proxies[$target_class][$target_type]) && !class_exists($this->generated_proxies[$target_class][$target_type])) {
-            $proxy_name = array_slice(explode('\\', $this->generated_proxies[$target_class][$target_type]), -1)[0];
-            $filename = $this->cache_dir . '/' . $proxy_name . '.php';
-            require_once($filename);
-        }
-        $proxy_name = $this->generated_proxies[$target_class][$target_type];
-        if($target_type === 'T'){
+
+        if($target_kind === 'T'){
             $result = new $proxy_name($target, $interceptor);
         }
         else{
