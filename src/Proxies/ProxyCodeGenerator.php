@@ -21,8 +21,7 @@ class ProxyCodeGenerator
     public function __construct(string $class, public string $proxy_name, private bool $hasTarget)
     {
         $this->class = new ReflectionClass($class);
-        $this->methods = array_filter($this->class->getMethods(), fn (ReflectionMethod $m) => (($m->isPublic() || $m->isProtected()) && !$m->isFinal() && !$m->isConstructor()&& !$m->isStatic()));
-      
+        $this->methods = array_filter($this->class->getMethods(), fn (ReflectionMethod $m) => (($m->isPublic() || $m->isProtected()) && !$m->isFinal() && !$m->isConstructor() && !$m->isStatic()));
     }
     public function generate(): string
     {
@@ -41,11 +40,45 @@ class ProxyCodeGenerator
             $method) {
             $result = array_merge($result, self::indent($this->wrap_method($method)));
         }
+
+        // $result = array_merge($result, self::indent($this->create_set_handler()));
+
         $result[] = '}';
 
 
         return implode("\n", $result);
     }
+
+    // private function create_set_handler(): array
+    // {
+    //     $result = [];
+    //     if (empty(array_filter($this->methods, fn ($m) => $m->getName() === '__set'))) {
+    //         $result[] = 'public __set(string $name, mixed $value): void';
+    //         $result[] = '{';
+    //         $result[] = '    $invocation = new \\CannaPress\\Util\\Proxies\\Invocation( ';
+    //         $result[] = '        ' . ($this->hasTarget ? '$this->proxied_object' : 'null') . ',';
+    //         $result[] = '        \'__set\',';
+    //         $result[] = '        [$name, $value],';
+    //         $result[] = '        [\'mixed\'],';
+    //         $result[] = '    );';
+    //         if ($this->hasTarget) {
+    //             $result[] = '    if($this->interceptor->supports($invocation))';
+    //             $result[] = '    {';
+    //         }
+    //         $result[] = '        $this->interceptor->invoke($invocation);';
+
+    //         if ($this->hasTarget) {
+    //             $result[] = '    }';
+    //             $result[] = '    else';
+    //             $result[] = '    {';
+    //             $result[] = '        $invocation->proceed();';
+    //             $result[] = '    }';
+    //         }
+
+    //         $result[] = '}';
+    //     }
+    //     return $result;
+    // }
     private function get_named_type_declaration(ReflectionNamedType|null $type)
     {
         $name = '';
@@ -97,7 +130,7 @@ class ProxyCodeGenerator
     {
         $params = $method->getParameters();
         $return_type = $this->get_type_declaration($method->getReturnType());
-        $return_parts = empty($return_type)? ['mixed'] : explode('|', $return_type);
+        $return_parts = empty($return_type) ? ['mixed'] : explode('|', $return_type);
 
         $result = [];
         $access = $method->isPublic() ? 'public' : 'protected';
@@ -114,7 +147,7 @@ class ProxyCodeGenerator
         $result[] = ') ' . (!empty($return_type) ? (': ' . $return_type) : '');
         $result[] = '{';
         $result[] = '    $invocation = new \\CannaPress\\Util\\Proxies\\Invocation( ';
-        $result[] = '        ' . ($this->hasTarget ? '$this->wrapped_instance' : 'null') . ',';
+        $result[] = '        ' . ($this->hasTarget ? '$this->proxied_object' : 'null') . ',';
         $result[] = '        \'' . addslashes($method->getName()) . '\',';
         $result[] = '        [' . implode(', ', array_map(fn ($x) => '$' . $x->getName(), $params)) . ' ],';
         $result[] = '        [' . implode(', ', array_map(fn ($x) => "'$x'", $return_parts)) . ' ],';
@@ -144,7 +177,7 @@ class ProxyCodeGenerator
         $result = [];
         $result[] = 'public function __construct(';
         if ($this->hasTarget) {
-            $result[] = '    private \\' . ($this->class->getName()) . ' $wrapped_instance,';
+            $result[] = '    private \\' . ($this->class->getName()) . ' $proxied_object,';
         }
         $result[] = '    private \\CannaPress\\Util\\Proxies\\Interceptor $interceptor';
         $result[] = ')';
@@ -155,7 +188,7 @@ class ProxyCodeGenerator
             $result[] = '  try {';
             $result[] = '    parent::__construct(' . (implode(', ', array_map(fn ($x) => 'null', range(1, $param_count)))) . ');';
             $result[] = '  } catch (\TypeError $ex) {';
-            $result[] = '    // snarf errors constructing as well be delegating to $this->wrapped_instance';
+            $result[] = '    // snarf errors constructing as well be delegating to $this->proxied_object';
             $result[] = '  }';
         }
         $result[] = '}';
