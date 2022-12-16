@@ -1,6 +1,6 @@
 <?php
 
-//declare(strict_types=1);
+declare(strict_types=1);
 
 namespace CannaPress\Util\Proxies;
 
@@ -27,7 +27,7 @@ class ProxyCodeGenerator
     {
         $result = [];
         $result[] = '<?php';
-        $result[] = '//declare(strict_types=1);';
+        $result[] = 'declare(strict_types=1);';
 
         $extension = $this->class->isInterface() ? 'implements' : 'extends';
         $result[] =  'final class ' . ($this->proxy_name) . ' ' . $extension . ' \\' . ($this->class->getName());

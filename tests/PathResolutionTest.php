@@ -1,6 +1,6 @@
 <?php
 
-//declare(strict_types=1);
+declare(strict_types=1);
 
 use CannaPress\Util\Templates\DirectoryResolver;
 use CannaPress\Util\Templates\FileResolver;
