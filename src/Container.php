@@ -4,69 +4,62 @@ declare(strict_types=1);
 
 namespace CannaPress\Util;
 
-use CannaPress\Util\DependsOn;
 use CannaPress\Util\Logging\DefaultLogger;
-use DateTimeImmutable;
-use DateTimeZone;
-use Monolog\Formatter\JsonFormatter;
-use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
-use Psr\Log\AbstractLogger;
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
 use Psr\Log\NullLogger;
 use ReflectionClass;
-use SplFileObject;
 
 class Container implements \Psr\Container\ContainerInterface
 {
     protected array $providers;
-    public function __construct(protected string $plugin_root_dir, private $prefix,  array $providers)
+    public function __construct(protected string $plugin_root_dir, private $name, array $providers)
     {
-        $providers = self::ensure_providers_is_map($providers);
-        if (!isset($providers[Env::class])) {
-            $providers[Env::class] = self::default_env($plugin_root_dir);
-        }
-        if (!isset($providers[\Psr\Log\LoggerInterface::class])) {
-            $providers[\Psr\Log\LoggerInterface::class] = self::default_logger($plugin_root_dir, $plugin_root_dir);
+        $this->providers = self::ensure_providers_is_map($providers);
+
+        /** @var Env */
+        $env  = null;
+        if (!isset($this->providers[Env::class])) {
+            $env = Env::create(trailingslashit($plugin_root_dir) . '.env');
+            $this->providers[Env::class] = self::singleton($env);
+        } else {
+            $env = ($this->providers[Env::class])($this);
         }
 
-
-        $keys = array_keys($providers);
-        foreach ($keys as $service) {
-            if (is_string($providers[$service]) && class_exists($providers[$service])) {
-                $providers[$service] = self::create_provider($providers[$service]);
-            }
-            if (!is_callable($providers[$service])) {
-                $providers[$service] = self::singleton($providers[$service]);
-            }
+        if (!isset($this->providers[\Psr\Log\LoggerInterface::class])) {
+            $logger = $env->get('CANNAPRESS:' . strtoupper($this->name) . ':ENABLE_LOGGING', '0') === '1'
+                ? new DefaultLogger(trailingslashit($plugin_root_dir) . 'logs/' . $this->name . '.log')
+                : new NullLogger();
+            $this->providers[\Psr\Log\LoggerInterface::class] = self::singleton($logger);
         }
-        $this->providers = $providers;
-        do_action($prefix . '_container_initialized', $this);
+        do_action($this->name . '_container_initialized', $this);
     }
-    public static function ensure_providers_is_map($providers)
+    public static function ensure_providers_is_map($providers, $create_provider = null)
     {
+        if ($create_provider === null) {
+            $create_provider = fn ($impl) => new AutoProvider($impl);
+        }
         $result = [];
         foreach (array_keys($providers) as $key) {
+            $value = $providers[$key];
             if (is_int($key)) {
-                $result[$providers[$key]] = $providers[$key];
+                if (is_string($value) && class_exists($value)) {
+                    $result[$value] = $create_provider($value);
+                } else if (is_object($value)) {
+                    $result[get_class($value)] = self::singleton($value);
+                } else {
+                    $result[strval($key)] = self::singleton($value);
+                }
             } else {
-                $result[$key] = $providers[$key];
+                if (is_string($value) && class_exists($value)) {
+                    $result[$key] = $create_provider($value);
+                } else if (!is_callable($value)) {
+                    $result[$key] = self::singleton($value);
+                } else {
+                    $result[$key] = $value;
+                }
             }
         }
         return $result;
     }
-    public static function default_env(string $plugin_root_dir)
-    {
-        return Container::singleton(fn ($ctx) => Env::create(trailingslashit($plugin_root_dir) . '.env'));
-    }
-    public static function default_logger(string $plugin_root_dir, $prefix)
-    {
-        return self::singleton(function ($ctx) use ($plugin_root_dir, $prefix) {
-            return new DefaultLogger(trailingslashit($plugin_root_dir) . 'logs/' . $prefix . '.log');
-        });
-    }
-
 
     protected function register_container_hooks()
     {
@@ -87,7 +80,7 @@ class Container implements \Psr\Container\ContainerInterface
         $results = [];
         foreach ($this->services() as $s) {
             if (class_exists($s)) {
-                $key = $this->prefix . 'svc_hooks_' . \CannaPress\Util\Hashes::fast($s);
+                $key = $this->name . 'svc_hooks_' . \CannaPress\Util\Hashes::fast($s);
                 $service_hooks = \CannaPress\Util\TransientCache::get_transient($key);
                 if ($service_hooks === false) {
                     $service_hooks = [];
@@ -129,52 +122,7 @@ class Container implements \Psr\Container\ContainerInterface
         }
         return $results;
     }
-    public static function extract_service_constructor_args($service_impl)
-    {
-        $arg_types = [];
-        $clazz = new ReflectionClass($service_impl);
-        $constructor = $clazz->getConstructor();
-        if ($constructor !== null) {
-            foreach ($constructor->getParameters() as $p) {
-                $attrs = $p->getAttributes(DependsOn::class);
-                if (!empty($attrs)) {
-                    $arg_types[] = $attrs[0]->newInstance()->service_name;
-                } else {
-                    $arg_types[] = $p->getType()->getName();
-                }
-            }
-        }
-        return $arg_types;
-    }
 
-    protected function create_provider(string $service_impl)
-    {
-        $key = $this->prefix . 'svc_args_' . \CannaPress\Util\Hashes::fast($service_impl);
-        $arg_types = \CannaPress\Util\TransientCache::get_transient($key);
-        if ($arg_types === false) {
-            $arg_types = self::extract_service_constructor_args($service_impl);
-            \CannaPress\Util\TransientCache::set_transient($key, $arg_types);
-        }
-        return self::singleton(function ($ctx) use ($service_impl, $arg_types, $key) {
-            try {
-                $args = [];
-                foreach ($arg_types as $type) {
-                    $args[] = $ctx->get($type);
-                }
-                $instance = new $service_impl(...$args);
-                return $instance;
-            } catch (\TypeError $err) {
-                $arg_types = Container::extract_service_constructor_args($service_impl);
-                \CannaPress\Util\TransientCache::set_transient($key, $arg_types);
-                $args = [];
-                foreach ($arg_types as $type) {
-                    $args[] = $ctx->get($type);
-                }
-                $instance = new $service_impl(...$args);
-                return $instance;
-            }
-        });
-    }
     protected function services(): array
     {
         return array_keys($this->providers);
@@ -192,9 +140,9 @@ class Container implements \Psr\Container\ContainerInterface
         $result = null;
         if ($this->has($id)) {
             $provider = $this->get_provider($id);
-            $result = ($provider)($this);
+            $result = is_callable($provider) ? ($provider)($this) : $provider;
         }
-        $result = apply_filters($this->prefix . '_container_make', $result, $id, $this);
+        $result = apply_filters($this->name . '_container_create_instance', $result, $id, $this);
         return $result;
     }
     public function add(string $identifier, callable | object $providerOrInstance)
@@ -217,6 +165,9 @@ class Container implements \Psr\Container\ContainerInterface
     }
     public static function singleton(callable|object $provider): callable
     {
+        if (!is_callable($provider)) {
+            return fn ($ctx) => $provider;
+        }
         return new class($provider)
         {
             private $instance;
@@ -226,11 +177,7 @@ class Container implements \Psr\Container\ContainerInterface
             public function __invoke(Container $container)
             {
                 if (!isset($this->instance)) {
-                    if (is_callable($this->provider)) {
-                        $this->instance = ($this->provider)($container);
-                    } else {
-                        $this->instance = $this->provider;
-                    }
+                    $this->instance = ($this->provider)($container);
                 }
                 return $this->instance;
             }

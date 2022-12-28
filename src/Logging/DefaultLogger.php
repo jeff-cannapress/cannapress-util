@@ -36,11 +36,16 @@ class DefaultLogger extends AbstractLogger
 
     public function log($level, string|Stringable $message, array $context = []): void
     {
-        $record = $this->build_record($level, $message, $context);
-        $file = $this->get_file();
-        $file->fwrite($record);
+        try{
+            $record = $this->build_record($level, $message, $context);
+            $file = $this->get_file();
+            $file->fwrite($record);
+        }
+        catch(Throwable $ex){
+            //snarf exception;
+        }
     }
-    const DEFAULT_JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR;
+    private const DEFAULT_JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR;
     private static function build_record($level, string|Stringable $message, array $context = [])
     {
         $output = '[' . strtoupper($level) . '/' . (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format(DateTimeImmutable::ISO8601) . ']:' . strval($message);

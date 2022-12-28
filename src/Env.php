@@ -4,23 +4,16 @@ declare(strict_types=1);
 
 namespace CannaPress\Util;
 
-use ArrayAccess;
-use Iterator;
 
-class Env implements ArrayAccess, Iterator
+class Env
 {
 
-    private function __construct(private string $prefix, private array $vars)
+    private function __construct(private array $vars)
     {
     }
     public static function create(string $source_file)
     {
-        return new self('', array_merge($_ENV, self::read_source_file($source_file)));
-    }
-    public function create_child(...$segments)
-    {
-        $prefix = ltrim($this->prefix . ':' . implode(':', $segments), ':');
-        return new self($prefix, $this->vars);
+        return new self(array_merge($_ENV, self::read_source_file($source_file)));
     }
 
     private static function read_source_file_uncached($source_file)
@@ -32,7 +25,8 @@ class Env implements ArrayAccess, Iterator
 
         $lines = file($source_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
-            if (strpos(ltrim($line), '#') === 0) {
+            $line = ltrim($line);
+            if (strpos($line, '#') === 0) {
                 continue;
             }
             if (str_contains($line, '=')) {
@@ -49,7 +43,7 @@ class Env implements ArrayAccess, Iterator
     private static function read_source_file($source_file)
     {
         if (file_exists($source_file)) {
-            $cache_key = 'cpscache:' . \CannaPress\Util\Hashes::fast( $source_file);
+            $cache_key = 'cpscache:' . \CannaPress\Util\Hashes::fast($source_file);
             $stamp = filemtime($source_file);
             $cached_value = \CannaPress\Util\TransientCache::get_transient($cache_key);
             if ($cached_value === false || $cached_value->filemtime !== $stamp) {
@@ -60,56 +54,8 @@ class Env implements ArrayAccess, Iterator
         }
         return [];
     }
-    public function get(string $name, ?string $default = null, bool $force_scoped = false)
+    public function get(string $name, ?string $default = null)
     {
-        $scoped = ltrim($this->prefix . ':' . $name, ':');
-        if (isset($this->vars[$scoped])) {
-            return $this->vars[$scoped];
-        } else if ($force_scoped) {
-            return $default;
-        }
         return isset($this->vars[$name]) ? $this->vars[$name] : $default;
-    }
-    public function __get($name)
-    {
-        return $this->get($name);
-    }
-
-    public function offsetExists(mixed $offset): bool
-    {
-        return isset($this->vars[$offset]);
-    }
-    public function offsetGet(mixed $offset): mixed
-    {
-        return $this->offsetExists($offset) ? $this->vars[$offset] : null;
-    }
-    public function offsetSet(mixed $offset, mixed $value): void
-    {
-        $this->vars[$offset] = $value;
-    }
-    public function offsetUnset(mixed $offset): void
-    {
-        unset($this->vars[$offset]);
-    }
-    public function rewind(): void
-    {
-        reset($this->vars);
-    }
-
-    public function current()
-    {
-        return current($this->vars);
-    }
-    function key()
-    {
-        return key($this->vars);
-    }
-    public function next(): void
-    {
-        next($this->vars);
-    }
-    public function valid(): bool
-    {
-        return key($this->vars) !== null;
     }
 }
