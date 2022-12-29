@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace CannaPress\Util;
 
-use CannaPress\Util\Logging\DefaultLogger;
+use CannaPress\Util\Logging\Logger;
 use Psr\Log\NullLogger;
 use ReflectionClass;
 
@@ -26,7 +26,7 @@ class Container implements \Psr\Container\ContainerInterface
 
         if (!isset($this->providers[\Psr\Log\LoggerInterface::class])) {
             $logger = $env->get('CANNAPRESS:' . strtoupper($this->name) . ':ENABLE_LOGGING', '0') === '1'
-                ? new DefaultLogger(trailingslashit($plugin_root_dir) . 'logs/' . $this->name . '.log')
+                ? Logger::default(trailingslashit($plugin_root_dir) . 'logs/' . $this->name . '.log')
                 : new NullLogger();
             $this->providers[\Psr\Log\LoggerInterface::class] = self::singleton($logger);
         }
@@ -35,7 +35,7 @@ class Container implements \Psr\Container\ContainerInterface
     public static function ensure_providers_is_map($providers, $create_provider = null)
     {
         if ($create_provider === null) {
-            $create_provider = fn ($impl) => new AutoProvider($impl);
+            $create_provider = fn ($impl) => new AutoProvider($this, $impl);
         }
         $result = [];
         foreach (array_keys($providers) as $key) {
@@ -131,15 +131,21 @@ class Container implements \Psr\Container\ContainerInterface
     {
         return array_key_exists($identifier, $this->providers) && !is_null($this->providers[$identifier]);
     }
-    protected function get_provider($id)
+
+    public function get_name()
     {
-        return $this->providers[$id];
+        return $this->name;
     }
+    public function get_plugin_dir()
+    {
+        return rtrim($this->plugin_root_dir, '/');
+    }
+
     public function get(string $id): mixed
     {
         $result = null;
         if ($this->has($id)) {
-            $provider = $this->get_provider($id);
+            $provider =  $this->providers[$id];
             $result = is_callable($provider) ? ($provider)($this) : $provider;
         }
         $result = apply_filters($this->name . '_container_create_instance', $result, $id, $this);
