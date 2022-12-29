@@ -13,7 +13,7 @@ class Container implements \Psr\Container\ContainerInterface
     protected array $providers;
     public function __construct(protected string $plugin_root_dir, private $name, array $providers)
     {
-        $this->providers = self::ensure_providers_is_map($providers);
+        $this->providers = $this->ensure_providers_is_map($providers);
 
         /** @var Env */
         $env  = null;
@@ -25,24 +25,19 @@ class Container implements \Psr\Container\ContainerInterface
         }
 
         if (!isset($this->providers[\Psr\Log\LoggerInterface::class])) {
-            $logger = $env->get('CANNAPRESS:' . strtoupper($this->name) . ':ENABLE_LOGGING', '0') === '1'
-                ? Logger::default(trailingslashit($plugin_root_dir) . 'logs/' . $this->name . '.log')
-                : new NullLogger();
-            $this->providers[\Psr\Log\LoggerInterface::class] = self::singleton($logger);
+            $this->providers[\Psr\Log\LoggerInterface::class] = self::singleton(new NullLogger());
         }
         do_action($this->name . '_container_initialized', $this);
     }
-    public static function ensure_providers_is_map($providers, $create_provider = null)
+    private function ensure_providers_is_map($providers)
     {
-        if ($create_provider === null) {
-            $create_provider = fn ($impl) => new AutoProvider($this, $impl);
-        }
+
         $result = [];
         foreach (array_keys($providers) as $key) {
             $value = $providers[$key];
             if (is_int($key)) {
                 if (is_string($value) && class_exists($value)) {
-                    $result[$value] = $create_provider($value);
+                    $result[$value] = new AutoProvider($this, $value);
                 } else if (is_object($value)) {
                     $result[get_class($value)] = self::singleton($value);
                 } else {
@@ -50,7 +45,7 @@ class Container implements \Psr\Container\ContainerInterface
                 }
             } else {
                 if (is_string($value) && class_exists($value)) {
-                    $result[$key] = $create_provider($value);
+                    $result[$key] = new AutoProvider($this, $value);
                 } else if (!is_callable($value)) {
                     $result[$key] = self::singleton($value);
                 } else {

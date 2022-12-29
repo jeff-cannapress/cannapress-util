@@ -39,7 +39,7 @@ abstract class RecordFactory
             }
             public function create($level, string|Stringable $message, array $context = []): Record
             {
-                $channel = self::find_channel(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT,4));
+                $channel = self::find_channel(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS,4));
                 return new Record(
                     new DateTimeImmutable('now', new DateTimeZone('UTC')),
                     $channel,
@@ -51,9 +51,9 @@ abstract class RecordFactory
             }
             private static function find_channel($dbg){
 
-                if(isset($dbg[2])){
-                    if(isset($dbg[2]['object'])){
-                        return get_class($dbg[2]['object']);
+                if(isset($dbg[3])){
+                    if(isset($dbg[3]['class'])){
+                        return $dbg[3]['class'];
                     }
                 }
                 return 'NONE';

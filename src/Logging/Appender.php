@@ -36,7 +36,8 @@ abstract class Appender
             public function append(Record $record): void
             {
                 $file = $this->get_file();
-                $file->fwrite($this->formatter->format($record));
+                $serialized = $this->formatter->format($record);
+                $file->fwrite($serialized);
                 $file->fflush();
             }
         };

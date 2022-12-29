@@ -10,7 +10,7 @@ use Psr\Log\LoggerInterface;
 
 class Logger extends AbstractLogger
 {
-    public function __construct(private Appender $appender, private RecordFactory $recordFactory = null)
+    public function __construct(private Appender $appender, private RecordFactory|null $recordFactory = null)
     {
         if ($this->recordFactory == null) {
             $this->recordFactory = RecordFactory::default();
@@ -23,6 +23,6 @@ class Logger extends AbstractLogger
     }
     public static function default(string $path): LoggerInterface
     {
-        return new Logger(Appender::file($path, Formatter::flat_file(), RecordFactory::caller_channel()));
+        return new Logger(Appender::file($path, Formatter::flat_file()), RecordFactory::caller_channel());
     }
 }
