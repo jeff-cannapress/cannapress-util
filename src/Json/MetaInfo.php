@@ -83,8 +83,11 @@ abstract class MetaInfo
             {
                 return $this->json_prop;
             }
-            public function load(object $instance, array $json): void
+            public function load(object $instance, array|object $json): void
             {
+                if(is_object($json)){
+                    $json= get_object_vars($json);
+                }
                 $value = isset($json[$this->json_prop]) ? $json[$this->json_prop] : ($this->default)();
                 $value = ($this->coerce_load)($value);
                 $instance->{$this->prop} = $value;
