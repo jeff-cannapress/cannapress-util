@@ -59,6 +59,64 @@ abstract class MetaInfo
             }
         };
     }
+    public static function array_prop(string $prop, mixed $default = [], callable $coerce_load = null, callable $coerce_save = null, ?string $json_prop = null): MetaInfo{
+        if (is_null($coerce_load)) {
+            $coerce_load = fn ($x) => $x;
+        }
+        if (is_null($coerce_save)) {
+            $coerce_save = fn ($x) => $x;
+        }
+        if (!is_callable($default)) {
+            $value = $default;
+            $default = fn () => $value;
+        }
+        if (is_null($json_prop)) {
+            $json_prop = $prop;
+        }
+        return new class($prop, $default, $coerce_load, $coerce_save, $json_prop) extends MetaInfo
+        {
+            public function __construct(private string $prop, private  $default, private $coerce_load, private $coerce_save, private string $json_prop)
+            {
+            }
+            public function key(): string
+            {
+                return $this->json_prop;
+            }
+            public function load(object $instance, array|object $json): void
+            {
+                if(is_object($json)){
+                    $json= get_object_vars($json);
+                }
+                $value = isset($json[$this->json_prop]) ? $json[$this->json_prop] : ($this->default)();
+                if(is_null($value)){
+                    $instance->{$this->prop} = null;
+                }
+                else{
+                    $instance->{$this->prop} = [];
+                    if(is_array($value)){
+                        foreach($value as $element){
+                            $instance->{$this->prop}[] = ($this->coerce_load)($element);
+                        }
+                    }
+                }
+            }
+            public function serialize(array &$result, $instance): void
+            {
+                $value = $instance->{$this->prop};
+                if(is_array($value)){
+                    $result[$this->json_prop] = []; 
+                    foreach($value as $element){
+                        $result[$this->json_prop] [] = ($this->coerce_save)($element);
+                    } 
+                }
+                else{
+                    $result[$this->json_prop] = is_null($value)? null : []; 
+                }
+                
+            }
+        };
+
+    }
     public static function prop(string $prop, mixed $default = null, callable $coerce_load = null, callable $coerce_save = null, ?string $json_prop = null): MetaInfo
     {
         if (is_null($coerce_load)) {
@@ -109,8 +167,10 @@ abstract class MetaInfo
             if (is_object($json)) {
                 $json = get_object_vars($json);
             }
-            foreach ($json as $key => $value) {
-                $instance->{$key} = $value;
+            if(!is_null($json)){
+                foreach ($json as $key => $value) {
+                    $instance->{$key} = $value;
+                }
             }
         }
         return $instance;
