@@ -148,15 +148,17 @@ class MetaInfo
             public function persist($entity_id, $the_entity)
             {
                 $multiple = is_array($this->default);
-                $to_save = $this->coerce_saving($the_entity->{($this->prop)});
-                if($multiple){
-                    delete_post_meta($entity_id, $this->meta_key);
-                    foreach($to_save as $value){
-                        add_post_meta($entity_id, $this->meta_key, $value);
+                if(property_exists($the_entity, $this->prop)){
+                    $to_save = $this->coerce_saving($the_entity->{($this->prop)});
+                    if($multiple){
+                        delete_post_meta($entity_id, $this->meta_key);
+                        foreach($to_save as $value){
+                            add_post_meta($entity_id, $this->meta_key, $value);
+                        }
                     }
-                }
-                else{
-                    update_post_meta($entity_id, $this->meta_key, $to_save);
+                    else{
+                        update_post_meta($entity_id, $this->meta_key, $to_save);
+                    }
                 }
             }
             public function coerce_saving($value)
