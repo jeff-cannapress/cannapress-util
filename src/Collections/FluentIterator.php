@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CannaPress\Util\Collections;
 
 use InvalidArgumentException;
+use OutOfRangeException;
 
 class FluentIterator implements FluentCollection
 {
@@ -278,7 +279,7 @@ class FluentIterator implements FluentCollection
             $other->next();
         }
         //one sequence is longer
-        if (($other->valid() && !$this->valid()) || ($this->valid && !$other->valid())) {
+        if (($other->valid() && !$this->valid()) || ($this->valid() && !$other->valid())) {
             return false;
         }
 
@@ -558,15 +559,23 @@ class FluentIterator implements FluentCollection
     public function element_at(int $index): mixed
     {
         if (is_array($this->inner)) {
-            return $this->inner[$index];
+            if(isset($this->inner[$index])){
+                return $this->inner[$index];
+            }
+            throw new OutOfRangeException("The index $index is not valid for this array");
         }
+        $count = 0;
         foreach ($this as $item) {
+            $count++;
             if ($this->index === $index) {
                 return $item;
             }
         }
-
-        return null;
+        if($count > 0){
+            throw new OutOfRangeException("The index $index is not valid for this iterator");
+        }
+        throw new OutOfRangeException("The iterator contains no elements");
+        
     }
 
     public function last(callable $predicate = null): mixed
@@ -595,15 +604,27 @@ class FluentIterator implements FluentCollection
             return $this->filter($predicate)->first();
         }
         if (is_array($this->inner)) {
-            if (function_exists('array_key_first')) {
+            if(count($this->inner) > 0){
                 return $this->inner[\array_key_first($this->inner)];
-            } else {
-                $keys = array_keys($this->inner);
-                $first_key = $keys[0];
-                return $this->inner[$first_key];
             }
+            throw new OutOfRangeException("The array contains no elements");
         }
         return $this->element_at(0);
+    }
+    public function firstOrDefault(callable $predicate = null, mixed $defaultValue = null): mixed{
+        if (!is_null($predicate)) {
+            return $this->filter($predicate)->firstOrDefault(null, $defaultValue);
+        }
+        if (is_array($this->inner)) {
+            if(count($this->inner) > 0){
+                return $this->inner[\array_key_first($this->inner)];
+            }
+            return $defaultValue;
+        }
+        foreach ($this as $item) {
+            return $item;
+        }
+        return $defaultValue;
     }
 
     public function min(callable $comparitor = null): mixed

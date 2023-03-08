@@ -33,6 +33,7 @@ interface FluentCollection extends \Iterator
     public function average(string $by = 'mean'): mixed;
     public function last(callable $predicate = null): mixed;
     public function first(callable $predicate = null): mixed;
+    public function firstOrDefault(callable $predicate = null, mixed $defaultValue = null): mixed;
     public function min(callable $comparitor = null): mixed;
     public function max(callable $comparitor = null): mixed;
     public function count(callable $predicate = null): int;
