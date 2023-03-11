@@ -99,31 +99,12 @@ class IndexedCollection implements \ArrayAccess, FluentCollection
     {
         unset($this->inner[$offset]);
     }
-    protected function as_fluent()
+    protected function as_fluent(): FluentIterator
     {
         return new FluentIterator($this->inner);
     }
 
-    public function last(callable $predicate = null): mixed
-    {
-        if (!is_null($predicate)) {
-            return $this->as_fluent()->filter($predicate)->last();
-        }
-        if (count($this->inner)) {
-            return $this->inner[array_key_last($this->inner)];
-        }
-        return null;
-    }
-    public function first(callable $predicate = null): mixed
-    {
-        if (!is_null($predicate)) {
-            return $this->as_fluent()->filter($predicate)->first();
-        }
-        if (count($this->inner)) {
-            return $this->inner[array_key_first($this->inner)];
-        }
-        return null;
-    }
+
 
     public function count(callable $predicate = null): int
     {

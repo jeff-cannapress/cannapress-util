@@ -6,7 +6,7 @@ namespace CannaPress\Util\Collections;
 
 trait ImplementsFluentCollection
 {
-    abstract protected function as_fluent();
+    abstract protected function as_fluent() : FluentIterator;
     public function append(iterable $other): FluentCollection
     {
         return $this->as_fluent()->append($other);
@@ -61,7 +61,7 @@ trait ImplementsFluentCollection
     }
     public function skip_while(callable $predicate): FluentCollection
     {
-        return $this->as_fluent()->skip_while($predicate);
+        return $this->as_fluent()->skip_while($predicate)->to_array();
     }
     public function skip(int $count): FluentCollection
     {
@@ -119,5 +119,22 @@ trait ImplementsFluentCollection
     public function sum(callable $predicate = null): mixed
     {
         return $this->as_fluent()->filter($predicate)->sum();
+    }
+
+    public function last(callable $predicate = null): mixed
+    {
+        return $this->as_fluent()->last($predicate);
+    }
+    public function lastOrDefault(callable $predicate = null, mixed $defaultValue = null): mixed
+    {
+        return $this->as_fluent()->lastOrDefault($predicate, $defaultValue);
+    }
+    public function first(callable $predicate = null): mixed
+    {
+        return $this->as_fluent()->first($predicate);
+    }
+    public function firstOrDefault(callable $predicate = null, mixed $defaultValue = null): mixed
+    {
+        return $this->as_fluent()->firstOrDefault($predicate, $defaultValue);
     }
 }

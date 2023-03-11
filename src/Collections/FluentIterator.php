@@ -192,8 +192,8 @@ class FluentIterator implements FluentCollection
 
     public function some(callable $predicate = null): bool
     {
-        if(is_null($predicate)){
-            $predicate = fn($x)=>true;
+        if (is_null($predicate)) {
+            $predicate = fn ($x) => true;
         }
         foreach ($this as $item) {
             if ($predicate($item)) {
@@ -559,10 +559,10 @@ class FluentIterator implements FluentCollection
     public function element_at(int $index): mixed
     {
         if (is_array($this->inner)) {
-            if(isset($this->inner[$index])){
+            if (isset($this->inner[$index])) {
                 return $this->inner[$index];
             }
-            throw new OutOfRangeException("The index $index is not valid for this array");
+            throw new OutOfRangeException("The index $index is not valid for this FluentIterator");
         }
         $count = 0;
         foreach ($this as $item) {
@@ -571,11 +571,10 @@ class FluentIterator implements FluentCollection
                 return $item;
             }
         }
-        if($count > 0){
-            throw new OutOfRangeException("The index $index is not valid for this iterator");
+        if ($count > 0) {
+            throw new OutOfRangeException("The index $index is not valid for this FluentIterator");
         }
-        throw new OutOfRangeException("The iterator contains no elements");
-        
+        throw new OutOfRangeException("The FluentIterator contains no elements");
     }
 
     public function last(callable $predicate = null): mixed
@@ -584,18 +583,32 @@ class FluentIterator implements FluentCollection
             return $this->filter($predicate)->last();
         }
         if (is_array($this->inner)) {
-            if (function_exists('array_key_last')) {
-                return $this->inner[\array_key_last($this->inner)];
-            } else {
-                $keys = array_keys($this->inner);
-                $last_key = $keys[count($keys) - 1];
-                return $this->inner[$last_key];
-            }
+            return $this->inner[\array_key_last($this->inner)];
         }
         foreach ($this as $item) {
         }
 
         return $item;
+    }
+    public function lastOrDefault(callable $predicate = null, mixed $defaultValue = null): mixed
+    {
+        if (!is_null($predicate)) {
+            return $this->filter($predicate)->lastOrDefault(null, $defaultValue);
+        }
+        if (is_array($this->inner)) {
+            if (count($this->inner) > 0) {
+                return $this->inner[\array_key_last($this->inner)];
+            }
+            return $defaultValue;
+        }
+        $counted = 0;
+        foreach ($this as $item) {
+            $counted++;
+        }
+        if ($counted > 0) {
+            return $item;
+        }
+        return $defaultValue;
     }
 
     public function first(callable $predicate = null): mixed
@@ -604,19 +617,23 @@ class FluentIterator implements FluentCollection
             return $this->filter($predicate)->first();
         }
         if (is_array($this->inner)) {
-            if(count($this->inner) > 0){
+            if (count($this->inner) > 0) {
                 return $this->inner[\array_key_first($this->inner)];
             }
-            throw new OutOfRangeException("The array contains no elements");
+            throw new OutOfRangeException("The FluentIterator contains no elements");
         }
-        return $this->element_at(0);
+        foreach ($this as $item) {
+            return $item;
+        }
+        throw new OutOfRangeException("The FluentIterator contains no elements");
     }
-    public function firstOrDefault(callable $predicate = null, mixed $defaultValue = null): mixed{
+    public function firstOrDefault(callable $predicate = null, mixed $defaultValue = null): mixed
+    {
         if (!is_null($predicate)) {
             return $this->filter($predicate)->firstOrDefault(null, $defaultValue);
         }
         if (is_array($this->inner)) {
-            if(count($this->inner) > 0){
+            if (count($this->inner) > 0) {
                 return $this->inner[\array_key_first($this->inner)];
             }
             return $defaultValue;
