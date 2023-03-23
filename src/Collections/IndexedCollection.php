@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace CannaPress\Util\Collections;
 
-class IndexedCollection implements \ArrayAccess, FluentCollection
+class IndexedCollection implements \ArrayAccess, FluentCollection, \JsonSerializable
 {
     use ImplementsFluentCollection;
     private $inner = [];
@@ -34,25 +34,31 @@ class IndexedCollection implements \ArrayAccess, FluentCollection
         }
         return $result;
     }
-    public function slice(int $offset, ?int $length) : IndexedCollection{
+    public function slice(int $offset, ?int $length): IndexedCollection
+    {
         return self::direct(array_slice($this->inner, $offset, $length));
     }
-    public function splice(int $offset, ?int $length = null, mixed $replacement = []){
+    public function splice(int $offset, ?int $length = null, mixed $replacement = [])
+    {
         $values = array_splice($this->inner, $offset, $length, $replacement);
         return self::direct($values);
     }
-    public function push(mixed ...$items): IndexedCollection{
+    public function push(mixed ...$items): IndexedCollection
+    {
         array_push($this->inner, ...$items);
         return $this;
     }
-    public function pop(): mixed{
+    public function pop(): mixed
+    {
         return array_pop($this->inner);
     }
-    public function unshift(mixed ...$items): IndexedCollection{
+    public function unshift(mixed ...$items): IndexedCollection
+    {
         array_unshift($this->inner, ...$items);
         return $this;
     }
-    public function shift(): mixed{
+    public function shift(): mixed
+    {
         return array_pop($this->inner);
     }
     public function rewind(): void
@@ -121,5 +127,9 @@ class IndexedCollection implements \ArrayAccess, FluentCollection
     public function to_array(): IndexedCollection
     {
         return new IndexedCollection($this->inner);
+    }
+    public function jsonSerialize(): mixed
+    {
+        return $this->inner;
     }
 }

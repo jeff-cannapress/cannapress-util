@@ -19,8 +19,8 @@ abstract class MetaInfo
         return self::prop(
             $prop,
             null,
-            fn ($x) => !empty($x) ? DateTimeImmutable::createFromFormat(DateTimeImmutable::ISO8601, $x) : null,
-            fn ($x) => $x?->format(DateTimeImmutable::ISO8601),
+            fn ($x) => !empty($x) ? DateTimeImmutable::createFromFormat(DateTimeImmutable::ATOM, $x) : null,
+            fn ($x) => $x?->format(DateTimeImmutable::ATOM),
             $json_prop
         );
     }

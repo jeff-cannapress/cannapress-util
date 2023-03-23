@@ -20,7 +20,7 @@ abstract class Formatter
             private const DEFAULT_JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR;
             public function format(Record $record): string
             {
-                $output = '[' . Level::getName($record->level) . '@' . $record->datetime->format(DateTimeImmutable::ISO8601) . (empty($record->channel ? '' : $record->channel)) . ']:' . strval($record->message);
+                $output = '[' . Level::getName($record->level) . '@' . $record->datetime->format(DateTimeImmutable::ATOM) . (empty($record->channel ? '' : $record->channel)) . ']:' . strval($record->message);
                 $ctx = array_merge($record->context);
                 foreach ($ctx as $var => $val) {
                     if (false !== strpos($output, '%context.' . $var . '%')) {

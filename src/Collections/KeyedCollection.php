@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace CannaPress\Util\Collections;
 
-class KeyedCollection implements \ArrayAccess, FluentCollection
+
+class KeyedCollection implements \ArrayAccess, FluentCollection, \JsonSerializable
 {
     use ImplementsFluentCollection;
     private $inner = [];
@@ -123,5 +124,10 @@ class KeyedCollection implements \ArrayAccess, FluentCollection
     public function values(): IndexedCollection
     {
         return IndexedCollection::direct(array_values($this->inner));
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return $this->inner;
     }
 }

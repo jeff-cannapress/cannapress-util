@@ -32,10 +32,9 @@ abstract class DbMetaInfo
             foreach ($this->props as $prop) {
                 $prop->load($the_entity, $all_metas);
             }
-            $this->after_fill($the_entity, $the_post);
+            $this->after_props_loaded($the_entity, $the_post);
             return $the_post;
         }
-        $this->after_fill($the_entity, $the_post);
         return null;
     }
     public function persist_metas($id, $the_entity)
@@ -45,7 +44,7 @@ abstract class DbMetaInfo
             $prop->persist($id, $the_entity);
         }
     }
-    protected function after_fill($the_entity, \WP_Post|null $the_post)
+    protected function after_props_loaded($the_entity, \WP_Post|null $the_post)
     {
     }
 

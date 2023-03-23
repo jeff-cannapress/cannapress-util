@@ -19,13 +19,13 @@ class DateTimePropMetaInfoItem implements DbMetaInfoItem
         $tzval = DbMetaInfo::get_meta_value($all_metas, $this->meta_key . '_tz', null, false);
         if (!empty($data)) {
             $tzval = $tzval ?? 'UTC';
-            $the_entity->{$this->prop} = DateTimeImmutable::createFromFormat(DateTimeImmutable::ISO8601, $data)->setTimezone(new DateTimeZone($tzval));
+            $the_entity->{$this->prop} = DateTimeImmutable::createFromFormat(DateTimeImmutable::ATOM, $data)->setTimezone(new DateTimeZone($tzval));
         }
     }
     public function persist($entity_id, $the_entity)
     {
         if (!is_null($the_entity->{($this->prop)})) {
-            update_post_meta($entity_id, $this->meta_key, $the_entity->{($this->prop)}->setTimezone(new DateTimeZone('UTC'))->format(DateTimeImmutable::ISO8601));
+            update_post_meta($entity_id, $this->meta_key, $the_entity->{($this->prop)}->setTimezone(new DateTimeZone('UTC'))->format(DateTimeImmutable::ATOM));
             update_post_meta($entity_id, $this->meta_key . '_tz', $the_entity->{($this->prop)}->getTimezone()->getName());
         } else {
             delete_post_meta($entity_id, $this->meta_key);

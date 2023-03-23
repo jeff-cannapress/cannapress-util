@@ -21,6 +21,7 @@ trait Dbable
         }
         $this->ID = (is_int($the_post) ? $the_post : (!is_null($the_post) ? $the_post->ID : 0));
         self::$db_metas->fill($this);
+        return $the_post;
     }
 
     public static function persist($instance)
@@ -34,7 +35,7 @@ trait Dbable
         if (self::$db_metas === null) {
             self::$db_metas = self::db_metas();
         }
-        $insert_props = self::$db_metas->get_insert_props();
+        $insert_props = self::$db_metas->get_insert_props($instance);
         $insert_props['ID'] = $instance->ID ?? 0;
         $id = wp_insert_post($insert_props);
         if (empty($instance->ID)) {
@@ -50,6 +51,4 @@ trait Dbable
         $result = self::$db_metas->after_persist_result($result);
         return $result;
     }
-
-    
 }

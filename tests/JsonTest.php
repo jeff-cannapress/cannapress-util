@@ -24,7 +24,7 @@ final class JsonTest extends TestCase
             'licensed_to' => [
                 'given_name' => 'Larry',
                 'family_name' => "Parallelogram",
-                'email' => 'larry.parallelogram@demo-cannabis-company.com',
+                'email' => 'sales@cannapress.tech',
                 'company_name' => 'DEMO CANNABIS COMPANY'
             ]
         ]);
@@ -38,7 +38,7 @@ final class JsonTest extends TestCase
         $proxyInstance = $pg->create(ToProxy::class, new ToProxy("", 120, new ChildClass([
             'given_name' => 'Larry',
             'family_name' => "Parallelogram",
-            'email' => 'larry.parallelogram@demo-cannabis-company.com',
+            'email' => 'sales@cannapress.tech',
             'company_name' => 'DEMO CANNABIS COMPANY'
         ])), new LoggingInterceptor());
 
