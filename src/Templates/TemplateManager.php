@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace CannaPress\Util\Templates;
 
 use CannaPress\Util\Container;
-use Exception;
+use WP_Block_Template;
 
 class TemplateManager
 {
@@ -65,7 +65,7 @@ class TemplateManager
         $instance_props = array_merge($parent_props, $instance_props);
         $factory =  $this->get_template_part_instance_factory($name);
         if (!$factory) {
-            throw new Exception("No template found for '$name'");
+            throw new TemplateNotFoundException("No template found for '$name'");
         }
         return $factory->create($instance_props);
     }
@@ -84,5 +84,10 @@ class TemplateManager
     {
         $instance = $this->find_template_part($name, $instance_props);
         return $instance->render();
+    }
+    public function get_block_template($name, $instance_props = [], $template_type = 'wp_template'): WP_Block_Template
+    {
+        $instance = $this->find_template_part($name, $instance_props);
+        return $instance->create_block_template($template_type);
     }
 }
