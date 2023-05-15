@@ -4,124 +4,66 @@ declare(strict_types=1);
 
 namespace CannaPress\Util;
 
-use CannaPress\Util\Logging\Logger;
+
+use Exception;
 use Psr\Log\NullLogger;
-use ReflectionClass;
+
 
 class Container implements \Psr\Container\ContainerInterface
 {
     protected array $providers;
-    public function __construct(protected string $plugin_root_dir, private $name, array $providers)
+
+    public function __construct(public string $plugin_root_dir, private $name, array|callable $providers)
     {
         $this->providers = $this->ensure_providers_is_map($providers);
 
         /** @var Env */
         $env  = null;
         if (!isset($this->providers[Env::class])) {
-            $env = Env::create(trailingslashit($plugin_root_dir) . '.env');
-            $this->providers[Env::class] = self::singleton($env);
-        } else {
-            $env = ($this->providers[Env::class])($this);
+            $this->providers[Env::class] = self::singleton($this->default_create_environment());
         }
 
         if (!isset($this->providers[\Psr\Log\LoggerInterface::class])) {
-            $this->providers[\Psr\Log\LoggerInterface::class] = self::singleton(new NullLogger());
+            $this->providers[\Psr\Log\LoggerInterface::class] = self::singleton($this->default_create_logger());
         }
         do_action($this->name . '_container_initialized', $this);
     }
+    protected function default_create_environment(): Env
+    {
+        $env = Env::create(trailingslashit($this->plugin_root_dir) . '.env');
+        return $env;
+    }
+    protected function default_create_logger()
+    {
+        return new NullLogger();
+    }
     private function ensure_providers_is_map($providers)
     {
-
+        $int_keys = [];
         $result = [];
         foreach (array_keys($providers) as $key) {
-            $value = $providers[$key];
             if (is_int($key)) {
-                if (is_string($value) && class_exists($value)) {
-                    $result[$value] = new AutoProvider($this, $value);
-                } else if (is_object($value)) {
-                    $result[get_class($value)] = self::singleton($value);
-                } else {
-                    $result[strval($key)] = self::singleton($value);
-                }
+                $int_keys[$key] = $providers[$key];
+            } else if (!is_callable($providers[$key])) {
+                $result[$key] = self::singleton($providers[$key]);
             } else {
-                if (is_string($value) && class_exists($value)) {
-                    $result[$key] = new AutoProvider($this, $value);
-                } else if (!is_callable($value)) {
-                    $result[$key] = self::singleton($value);
-                } else {
-                    $result[$key] = $value;
-                }
+                $result[$key] = $providers[$key];
             }
         }
-        return $result;
-    }
-
-    protected function register_container_hooks()
-    {
-        $actions = $this->get_reflected_hooks();
-        $services = [];
-        foreach ($actions as $action_name => $hooks) {
-            foreach ($hooks as $hook) {
-                if (!isset($services[$hook->service])) {
-                    $t = $this->get($hook->service);
-                    $services[$hook->service] = $t;
+        if (!empty($int_keys)) {
+            throw new class($int_keys) extends Exception implements \Psr\Container\ContainerExceptionInterface
+            {
+                public function __construct($bad_defs)
+                {
+                    parent::__construct("Error initializing container: numeric key(s) provided:\n" .  var_export($bad_defs, true));
                 }
-                add_action($action_name, [$services[$hook->service], $hook->method], $hook->priority, $hook->accepted_args);
-            }
+            };
         }
-    }
-    protected function get_reflected_hooks()
-    {
-        $results = [];
-        foreach ($this->services() as $s) {
-            if (class_exists($s)) {
-                $key = $this->name . 'svc_hooks_' . \CannaPress\Util\Hashes::fast($s);
-                $service_hooks = \CannaPress\Util\TransientCache::get_transient($key);
-                if ($service_hooks === false) {
-                    $service_hooks = [];
-                    $clazz = new ReflectionClass($s);
-
-                    foreach ($clazz->getAttributes(ActionHook::class) as $attr) {
-                        /** @var ActionHook */ $inst = $attr->newInstance();
-                        try {
-                            $inst->method = $clazz->getMethod($inst->method_name);
-                            if (!isset($service_hooks[$inst->hook_name])) {
-                                $service_hooks[$inst->hook_name] = [];
-                            }
-                            $service_hooks[$inst->hook_name][] = (object)['service' => $s, 'method' => $inst->method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($inst->method->getParameters())];
-                        } catch (\ReflectionException) {
-                            //snarf;
-                        }
-                    }
-                    foreach ($clazz->getMethods() as $method) {
-                        foreach ($method->getAttributes(ActionHook::class) as $attr) {
-                            $inst = $attr->newInstance();
-                            if (!isset($inst->hook_name)) {
-                                $inst->hook_name = preg_replace('/^on_/', '', $method->name, 1);
-                            }
-                            if (!isset($service_hooks[$inst->hook_name])) {
-                                $service_hooks[$inst->hook_name] = [];
-                            }
-                            $service_hooks[$inst->hook_name][] = (object)['service' => $s, 'method' => $method->getName(), 'priority' => $inst->priority, 'accepted_args' => count($method->getParameters())];
-                        }
-                    }
-                    \CannaPress\Util\TransientCache::set_transient($key, $service_hooks);
-                }
-                foreach ($service_hooks as $hook_name => $metas) {
-                    if (!isset($results[$hook_name])) {
-                        $results[$hook_name] = [];
-                    }
-                    $results[$hook_name] = array_merge($results[$hook_name], $metas);
-                }
-            }
-        }
-        return $results;
+        return $providers;
     }
 
-    protected function services(): array
-    {
-        return array_keys($this->providers);
-    }
+
+
     public function has($identifier): bool
     {
         return array_key_exists($identifier, $this->providers) && !is_null($this->providers[$identifier]);
@@ -150,7 +92,7 @@ class Container implements \Psr\Container\ContainerInterface
     {
         if (!empty($identifier) && !is_null($providerOrInstance)) {
             if (!is_callable($providerOrInstance)) {
-                $providerOrInstance = self::singleton($providerOrInstance);
+                $providerOrInstance = self::singleton($providerOrInstance, $identifier);
             }
             $this->providers[$identifier] = $providerOrInstance;
         }
@@ -175,7 +117,8 @@ class Container implements \Psr\Container\ContainerInterface
             public function __construct(private $provider)
             {
             }
-            public function __invoke(Container $container)
+
+            public function __invoke(Container $container): mixed
             {
                 if (!isset($this->instance)) {
                     $this->instance = ($this->provider)($container);

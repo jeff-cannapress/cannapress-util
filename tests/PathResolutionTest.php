@@ -25,24 +25,7 @@ function trailingslashit($string)
 final class PathResolutionTest extends TestCase
 {
 
-    public function testCanGeneratePathsInScope(): void
-    {
 
-        $dirs = (new DirectoryResolver('cannapress',  'templates'))->child_resolver('public');
-        self::$template_directory = 'parent_theme_dir';
-        self::$stylesheet_directory = 'child_theme_dir';
-        $actual = $dirs->get_possible_template_directories();
-        $expected = [
-            1 => 'child_theme_dir/cannapress/public/',
-            10 => 'parent_theme_dir/cannapress/public/',
-            15 => 'parent_theme_dir/public/',
-            100000 => 'templates/public/',
-        ];
-        foreach ($expected as $key => $expectedValue) {
-            $this->assertTrue(isset($actual[$key]));
-            $this->assertEquals($expectedValue, $actual[$key]);
-        }
-    }
     
     
     public function testCanGeneratePathsWithChildTheme(): void

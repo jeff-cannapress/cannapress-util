@@ -25,7 +25,7 @@ class TemplateInstanceFactory
             $instance_props = $new_instance_props;
         }
 
-        $instance_props = TemplateManagerHooks::get_instance_props($instance_props, $this->filters_identifier, $this->file_name, $this);
+
         return $instance_props;
     }
 
@@ -47,7 +47,7 @@ class TemplateInstanceFactory
             }
             public function check_emit(): bool
             {
-                return TemplateManagerHooks::should_do_emit(true, $this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
+                return true;
             }
             public function emit()
             {
@@ -58,17 +58,13 @@ class TemplateInstanceFactory
             }
             public function render()
             {
-                $html = TemplateManagerHooks::before_template_instance_rendered("", $this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 $html = $this->render_raw();
-                $html = TemplateManagerHooks::template_instance_rendered($html, $this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 return $html;
             }
             private function render_raw()
             {
                 ob_start();
-                TemplateManagerHooks::before_template_file_included($this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 include($this->abs_path_d3176d960d2749458b58b24f2813d7f2);
-                TemplateManagerHooks::after_template_file_included($this->filters_d3176d960d2749458b58b24f2813d7f2, $this->abs_path_d3176d960d2749458b58b24f2813d7f2, $this);
                 $result_d3176d960d2749458b58b24f2813d7f2 = ob_get_contents();
                 ob_end_clean();
                 return $result_d3176d960d2749458b58b24f2813d7f2;
