@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace CannaPress\Util\Templates;
 
 use CannaPress\Util\TransientCache;
-use CannaPress\Util\Container;
+
 
 class PathResolver
 {
-
+    public const cache_prefix = 'cannapress_paths';
     protected FileResolver $files;
     protected TransientCache $path_cache;
     public function __construct(
@@ -18,17 +18,15 @@ class PathResolver
         TransientCache|null $path_cache = null
     ) {
         $this->files = $files ?? new FileResolver();
-        $this->path_cache = $path_cache ?? new TransientCache(TemplateManager::filter_prefix);
+        $this->path_cache = $path_cache ?? new TransientCache(self::cache_prefix);
     }
     public function child(string $path)
     {
         return new PathResolver($this->dirs->child_resolver($path), $this->files, $this->path_cache);
     }
 
-    public function get_absolute_filename(string $name, array $extensions = ['php', 'html']): string|null
+    public function resolve(string $name, array $extensions = ['php', 'html']): string|null
     {
-
-
         if (empty($file_name)) {
             $cache_key = $name . '.' . (implode('|', $extensions));
             $file_name = $this->path_cache->get($cache_key);
@@ -41,9 +39,8 @@ class PathResolver
             }
         }
 
-
         if (false === $file_name) {
-            return "";
+            return '';
         }
         return $file_name;
     }

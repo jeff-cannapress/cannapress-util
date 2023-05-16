@@ -20,11 +20,15 @@ class Container implements \Psr\Container\ContainerInterface
         /** @var Env */
         $env  = null;
         if (!isset($this->providers[Env::class])) {
-            $this->providers[Env::class] = self::singleton($this->default_create_environment());
+            $this->providers[Env::class] = $this->default_create_environment();
         }
 
         if (!isset($this->providers[\Psr\Log\LoggerInterface::class])) {
-            $this->providers[\Psr\Log\LoggerInterface::class] = self::singleton($this->default_create_logger());
+            $this->providers[\Psr\Log\LoggerInterface::class] = $this->default_create_logger();
+        }
+        if (is_callable($this->providers[\Psr\Log\LoggerInterface::class])) {
+            $logger_instance = $this->providers[\Psr\Log\LoggerInterface::class]($this);
+            $this->providers[\Psr\Log\LoggerInterface::class] = $logger_instance;
         }
         do_action($this->name . '_container_initialized', $this);
     }
@@ -81,11 +85,24 @@ class Container implements \Psr\Container\ContainerInterface
     public function get(string $id): mixed
     {
         $result = null;
-        if ($this->has($id)) {
-            $provider =  $this->providers[$id];
-            $result = is_callable($provider) ? ($provider)($this) : $provider;
+        try {
+            if ($this->has($id)) {
+                $provider =  $this->providers[$id];
+                $result = is_callable($provider) ? ($provider)($this) : $provider;
+            }
+            $result = apply_filters($this->name . '_container_create_instance', $result, $id, $this);
+        } catch (\Throwable $ex) {
+            $i = 0;
+            $i++;
+            $logger = $this->providers[\Psr\Log\LoggerInterface::class];
+            $error_ctx =  [
+                'message' => $ex->getMessage(),
+                'stackTrace' => $ex->getTraceAsString()
+            ];
+            $logger->emergency('invalid provider configuration for ' . $id,$error_ctx);
+            $i = 0;
+            $i++;
         }
-        $result = apply_filters($this->name . '_container_create_instance', $result, $id, $this);
         return $result;
     }
     public function add(string $identifier, callable | object $providerOrInstance)

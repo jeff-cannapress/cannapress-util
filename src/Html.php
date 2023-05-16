@@ -112,13 +112,35 @@ class Html
             self::__render_html_from_arr($called, $elements);
         }
     }
+    private static function flatten_classes($classes)
+    {
+        $all_classes = [];
+        $stack      = [$classes];
 
+        while (count($stack) > 0) {
+            $stack_item = array_pop($stack);
+            if (is_array($stack_item)) {
+                foreach ($stack_item as $child) {
+                    if (is_array($child)) {
+                        array_push($stack, $child);
+                        $stack[] = $child;
+                    } else if (is_string($child)) {
+                        $all_classes[] = $child;
+                    }
+                }
+            } else if (is_string($stack_item)) {
+                $all_classes[] = $stack_item;
+            }
+        }
 
-    private static function __cannapress_coalesce_classes__flatten($parts, array &$result)
+        return $all_classes;
+    }
+
+    private static function _flatten_class_arr($parts, array &$result)
     {
         foreach ($parts as $part) {
             if (is_array($part)) {
-                self::__cannapress_coalesce_classes__flatten($part, $result);
+                self::_flatten_class_arr($part, $result);
             } else {
                 $result[] = $part;
             }
@@ -127,8 +149,7 @@ class Html
     public static function coalesce_classes(...$parts): string
     {
         $classes = [];
-        self::__cannapress_coalesce_classes__flatten($parts, $classes);
-
+        self::_flatten_class_arr($parts, $classes);
         return implode(' ', $classes);
     }
 }
