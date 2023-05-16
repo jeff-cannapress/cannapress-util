@@ -36,7 +36,7 @@ class Html
 
             foreach ($attribs as $attr_key => $attr_val) {
                 if ($attr_key === 'class') {
-                    $attr_val = cannapress_coalesce_classes($attr_val);
+                    $attr_val = self::coalesce_classes($attr_val);
                 }
                 $result[] = $attr_key;
                 $result[] = '="';
