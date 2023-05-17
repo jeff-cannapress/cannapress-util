@@ -13,13 +13,14 @@ class Env
     }
     public static function create(string $source_file)
     {
-        return new self(array_merge($_ENV, self::read_source_file($source_file)));
+        $inner = apply_filters('cannapress_util_env_settings', []);
+        return new self(array_merge($_ENV, self::read_source_file($source_file), $inner));
     }
 
     private static function read_source_file_uncached($source_file)
     {
         if (!is_readable($source_file)) {
-            throw new \RuntimeException(sprintf('%s file is not readable', $source_file));
+            return (object)['filemtime' => -1, 'lines' => []];
         }
         $result = (object)['filemtime' => filemtime($source_file), 'lines' => []];
 

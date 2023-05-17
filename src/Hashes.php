@@ -43,7 +43,7 @@ final class Hashes
         return sprintf(
             '%016x%04x%04x%04x%04x',
             $micros_since_2020,
-            mt_rand(0, 0xFfff),
+            mt_rand(0, 0xffff),
             mt_rand(0, 0xffff),
             mt_rand(0, 0xffff),
             mt_rand(0, 0xffff)

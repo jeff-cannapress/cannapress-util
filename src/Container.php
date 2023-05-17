@@ -13,12 +13,10 @@ class Container implements \Psr\Container\ContainerInterface
 {
     protected array $providers;
 
-    public function __construct(public string $plugin_root_dir, private $name, array|callable $providers)
+    public function __construct(public string $plugin_root_dir, private $name, array $providers)
     {
         $this->providers = $this->ensure_providers_is_map($providers);
 
-        /** @var Env */
-        $env  = null;
         if (!isset($this->providers[Env::class])) {
             $this->providers[Env::class] = $this->default_create_environment();
         }
@@ -99,7 +97,7 @@ class Container implements \Psr\Container\ContainerInterface
                 'message' => $ex->getMessage(),
                 'stackTrace' => $ex->getTraceAsString()
             ];
-            $logger->emergency('invalid provider configuration for ' . $id,$error_ctx);
+            $logger->emergency('invalid provider configuration for ' . $id, $error_ctx);
             $i = 0;
             $i++;
         }
