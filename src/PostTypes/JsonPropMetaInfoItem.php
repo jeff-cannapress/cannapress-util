@@ -6,7 +6,7 @@ namespace CannaPress\Util\PostTypes;
 
 class JsonPropMetaInfoItem implements DbMetaInfoItem
 {
-    public function __construct(private string $prop, private string $meta_key, private bool $associatve = false)
+    public function __construct(private string $prop, private string $meta_key, private ?string $implementationClass)
     {
     }
 
@@ -15,7 +15,12 @@ class JsonPropMetaInfoItem implements DbMetaInfoItem
         $strval = DbMetaInfo::get_meta_value($all_metas, $this->meta_key, null, false);
 
         if (!empty($strval)) {
-            $the_entity->{$this->prop} = json_decode($strval, $this->associatve);
+            if(!empty($this->implementationClass)){
+                $the_entity->{$this->prop} = new ($this->implementationClass)($strval);
+            }
+            else{
+                $the_entity->{$this->prop} = json_decode($strval, false);
+            }
         }
     }
     public function persist($entity_id, $the_entity)
