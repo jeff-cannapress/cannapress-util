@@ -35,7 +35,7 @@ class Container implements \Psr\Container\ContainerInterface
         $env = Env::create(trailingslashit($this->plugin_root_dir) . '.env');
         return $env;
     }
-    protected function default_create_logger()
+    protected function default_create_logger() :\Psr\Log\LoggerInterface
     {
         return new NullLogger();
     }
